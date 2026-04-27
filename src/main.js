@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
+import characterMaterialAtlasUrl from "./assets/character-material-atlas.png";
+import hkMaterialAtlasUrl from "./assets/hk-material-atlas.png";
 import hkRainStreetUrl from "./assets/hk-rain-street.png";
 import soldierModelUrl from "./assets/soldier.glb?url";
 import "./style.css";
@@ -18,7 +20,7 @@ const damageVignette = document.querySelector("#damage-vignette");
 const reticle = document.querySelector("#reticle");
 
 const renderSettings = {
-  maxPixelRatio: window.innerWidth < 760 ? 0.75 : 0.75,
+  maxPixelRatio: window.innerWidth < 760 ? 0.64 : 0.5,
   realtimeShadows: false,
   maxScenePointLights: window.innerWidth < 760 ? 4 : 7,
   maxRiggedEnemies: 1,
@@ -77,7 +79,7 @@ const input = {
 const cameraRig = {
   yaw: 0,
   pitch: 0.06,
-  distance: 4.9,
+  distance: 4.35,
   target: new THREE.Vector3(),
   desired: new THREE.Vector3(),
 };
@@ -88,10 +90,40 @@ const forwardV = new THREE.Vector3();
 const rightV = new THREE.Vector3();
 const generatedSceneOffset = new THREE.Vector2();
 const textureLoader = new THREE.TextureLoader();
+const textureReadyPromises = [];
 const gltfLoader = new GLTFLoader();
 const soldierModelPromise = gltfLoader.loadAsync(soldierModelUrl);
 const generatedAssets = createGeneratedAssetTextures();
 scene.background = visualMode.generatedScene ? generatedAssets.street : new THREE.Color(0x061018);
+
+const atlasPanels = {
+  wetRoad: [0.0, 0.0, 0.435, 0.36],
+  sidewalk: [0.0, 0.36, 0.435, 0.12],
+  concreteWall: [0.0, 0.52, 0.435, 0.35],
+  neonCluster: [0.435, 0.0, 0.31, 0.38],
+  verticalSign: [0.745, 0.0, 0.14, 0.33],
+  tubes: [0.78, 0.0, 0.08, 0.33],
+  cableWall: [0.745, 0.315, 0.25, 0.09],
+  acUnits: [0.745, 0.405, 0.25, 0.13],
+  shutters: [0.435, 0.52, 0.22, 0.35],
+  shopfront: [0.64, 0.545, 0.22, 0.2],
+  busPoster: [0.855, 0.55, 0.125, 0.28],
+  wallPosters: [0.855, 0.825, 0.125, 0.16],
+  tileWall: [0.0, 0.88, 0.42, 0.12],
+};
+
+const characterPanels = {
+  wetCoat: [0.0, 0.0, 0.42, 0.56],
+  tacticalFabric: [0.16, 0.56, 0.2, 0.24],
+  carbonFiber: [0.43, 0.0, 0.12, 0.32],
+  armorPlate: [0.55, 0.0, 0.15, 0.31],
+  gunmetal: [0.47, 0.74, 0.22, 0.24],
+  blackRubber: [0.72, 0.54, 0.18, 0.18],
+  cyanCircuit: [0.78, 0.25, 0.12, 0.23],
+  cyanLong: [0.86, 0.25, 0.14, 0.72],
+  magentaVisor: [0.7, 0.0, 0.3, 0.2],
+  boots: [0.16, 0.83, 0.18, 0.16],
+};
 
 let gameStarted = false;
 let gameOver = false;
@@ -134,7 +166,7 @@ createHongKongStreet();
 bindInput();
 resize();
 resetGame();
-animate();
+Promise.allSettled(textureReadyPromises).then(() => animate());
 
 function makeRng(seed) {
   let value = seed >>> 0;
@@ -240,12 +272,16 @@ function createPbrMapSet(width, height, options = {}) {
 
 function createGeneratedAssetTextures() {
   const load = (url) => {
-    const texture = textureLoader.load(url);
+    let resolveReady;
+    textureReadyPromises.push(new Promise((resolve) => { resolveReady = resolve; }));
+    const texture = textureLoader.load(url, resolveReady, undefined, resolveReady);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 8;
     return texture;
   };
   return {
+    character: load(characterMaterialAtlasUrl),
+    atlas: load(hkMaterialAtlasUrl),
     street: (() => {
       const texture = load(hkRainStreetUrl);
       texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -256,6 +292,38 @@ function createGeneratedAssetTextures() {
       return texture;
     })(),
   };
+}
+
+function atlasTexture(panel, sourceTexture = generatedAssets.atlas) {
+  const [x, y, w, h] = panel;
+  const texture = sourceTexture.clone();
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(w, h);
+  texture.offset.set(x, 1 - y - h);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 8;
+  return texture;
+}
+
+function characterTexture(panel) {
+  return atlasTexture(panel, generatedAssets.character);
+}
+
+function atlasMaterial(panel, options = {}) {
+  const material = new THREE.MeshStandardMaterial({
+    color: options.color ?? 0xffffff,
+    map: atlasTexture(panel),
+    roughness: options.roughness ?? 0.5,
+    metalness: options.metalness ?? 0.12,
+    emissive: options.emissive ?? 0x000000,
+    emissiveIntensity: options.emissiveIntensity ?? 0,
+    transparent: options.transparent ?? false,
+    opacity: options.opacity ?? 1,
+    side: options.side ?? THREE.FrontSide,
+  });
+  if (options.toneMapped === false) material.toneMapped = false;
+  return material;
 }
 
 function createMaterials() {
@@ -281,123 +349,10 @@ function createMaterials() {
   concreteMaps.normal.repeat.set(1, 15);
   concreteMaps.roughness.repeat.set(1, 15);
 
-  const roadTexture = canvasTexture(1024, 1024, (ctx, w, h) => {
-    ctx.fillStyle = "#111418";
-    ctx.fillRect(0, 0, w, h);
-    for (let i = 0; i < 4600; i += 1) {
-      const v = 16 + Math.floor(rng() * 42);
-      ctx.fillStyle = `rgba(${v}, ${v + 2}, ${v + 4}, ${0.12 + rng() * 0.18})`;
-      ctx.fillRect(rng() * w, rng() * h, 1 + rng() * 3, 1 + rng() * 3);
-    }
-    ctx.strokeStyle = "rgba(230, 218, 186, 0.36)";
-    ctx.lineWidth = 7;
-    ctx.setLineDash([70, 58]);
-    ctx.beginPath();
-    ctx.moveTo(w * 0.5, 0);
-    ctx.lineTo(w * 0.5, h);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.strokeStyle = "rgba(90, 112, 116, 0.35)";
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 34; i += 1) {
-      ctx.beginPath();
-      const y = rng() * h;
-      ctx.moveTo(rng() * w * 0.25, y);
-      ctx.bezierCurveTo(w * (0.3 + rng() * 0.2), y + rng() * 70, w * 0.7, y - rng() * 70, w, y + rng() * 40);
-      ctx.stroke();
-    }
-
-    const grad = ctx.createRadialGradient(w * 0.36, h * 0.22, 20, w * 0.36, h * 0.22, 420);
-    grad.addColorStop(0, "rgba(83, 209, 211, 0.16)");
-    grad.addColorStop(0.35, "rgba(232, 51, 75, 0.08)");
-    grad.addColorStop(1, "rgba(0, 0, 0, 0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-  });
-  roadTexture.wrapS = THREE.RepeatWrapping;
-  roadTexture.wrapT = THREE.RepeatWrapping;
-  roadTexture.repeat.set(2, 10);
-
-  const sidewalkTexture = canvasTexture(512, 512, (ctx, w, h) => {
-    ctx.fillStyle = "#30353a";
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 2;
-    for (let x = 0; x <= w; x += 64) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
-    }
-    for (let y = 0; y <= h; y += 64) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-    for (let i = 0; i < 900; i += 1) {
-      ctx.fillStyle = `rgba(0,0,0,${0.03 + rng() * 0.08})`;
-      ctx.fillRect(rng() * w, rng() * h, 1 + rng() * 3, 1 + rng() * 3);
-    }
-  });
-  sidewalkTexture.wrapS = THREE.RepeatWrapping;
-  sidewalkTexture.wrapT = THREE.RepeatWrapping;
-  sidewalkTexture.repeat.set(1, 15);
-
-  const coatTexture = canvasTexture(512, 512, (ctx, w, h) => {
-    ctx.fillStyle = "#111820";
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 1;
-    for (let y = 0; y < h; y += 12) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y + 12);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = "rgba(45,244,237,0.24)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(w * 0.18, 0);
-    ctx.lineTo(w * 0.42, h);
-    ctx.moveTo(w * 0.78, 0);
-    ctx.lineTo(w * 0.58, h);
-    ctx.stroke();
-    for (let i = 0; i < 1100; i += 1) {
-      const v = 18 + Math.floor(rng() * 36);
-      ctx.fillStyle = `rgba(${v},${v + 6},${v + 10},${0.12 + rng() * 0.2})`;
-      ctx.fillRect(rng() * w, rng() * h, 1 + rng() * 2, 1 + rng() * 2);
-    }
-  });
-  coatTexture.wrapS = THREE.RepeatWrapping;
-  coatTexture.wrapT = THREE.RepeatWrapping;
-  coatTexture.repeat.set(1.6, 2.4);
-
-  const enemyTexture = canvasTexture(512, 512, (ctx, w, h) => {
-    ctx.fillStyle = "#28262d";
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = "rgba(255,47,109,0.2)";
-    ctx.lineWidth = 3;
-    for (let x = -w; x < w * 2; x += 54) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x + w * 0.5, h);
-      ctx.stroke();
-    }
-    ctx.fillStyle = "rgba(255,255,255,0.08)";
-    for (let i = 0; i < 700; i += 1) {
-      ctx.fillRect(rng() * w, rng() * h, 1 + rng() * 4, 1);
-    }
-  });
-  enemyTexture.wrapS = THREE.RepeatWrapping;
-  enemyTexture.wrapT = THREE.RepeatWrapping;
-  enemyTexture.repeat.set(1.4, 2.1);
-
   return {
     asphalt: new THREE.MeshStandardMaterial({
       color: 0x1f2428,
-      map: wetAsphaltMaps.albedo,
+      map: atlasTexture(atlasPanels.wetRoad),
       normalMap: wetAsphaltMaps.normal,
       roughnessMap: wetAsphaltMaps.roughness,
       transparent: visualMode.generatedScene,
@@ -408,7 +363,7 @@ function createMaterials() {
     }),
     sidewalk: new THREE.MeshStandardMaterial({
       color: 0x5c6366,
-      map: concreteMaps.albedo,
+      map: atlasTexture(atlasPanels.sidewalk),
       normalMap: concreteMaps.normal,
       roughnessMap: concreteMaps.roughness,
       roughness: 0.62,
@@ -420,13 +375,21 @@ function createMaterials() {
       metalness: 0.08,
     }),
     playerCoat: new THREE.MeshStandardMaterial({
-      color: 0x161c22,
-      map: coatTexture,
-      roughness: 0.36,
-      metalness: 0.22,
+      color: 0x22282d,
+      map: characterTexture(characterPanels.wetCoat),
+      roughness: 0.28,
+      metalness: 0.24,
+    }),
+    playerArmor: new THREE.MeshStandardMaterial({
+      color: 0x2b3136,
+      map: characterTexture(characterPanels.armorPlate),
+      roughness: 0.24,
+      metalness: 0.62,
+      envMapIntensity: 1.2,
     }),
     playerAccent: new THREE.MeshStandardMaterial({
       color: 0x27d5d0,
+      map: characterTexture(characterPanels.cyanCircuit),
       emissive: 0x126968,
       emissiveIntensity: 1.35,
       roughness: 0.22,
@@ -440,13 +403,14 @@ function createMaterials() {
       metalness: 0.9,
     }),
     enemyBody: new THREE.MeshStandardMaterial({
-      color: 0x35323a,
-      map: enemyTexture,
-      roughness: 0.45,
-      metalness: 0.18,
+      color: 0x2a2228,
+      map: characterTexture(characterPanels.tacticalFabric),
+      roughness: 0.34,
+      metalness: 0.24,
     }),
     enemyAccent: new THREE.MeshStandardMaterial({
       color: 0xff335a,
+      map: characterTexture(characterPanels.magentaVisor),
       emissive: 0xb60028,
       emissiveIntensity: 1.2,
       roughness: 0.2,
@@ -474,6 +438,43 @@ function createMaterials() {
       roughness: 0.7,
       metalness: 0.05,
     }),
+    facadeConcrete: atlasMaterial(atlasPanels.concreteWall, {
+      color: 0xb8c4c6,
+      roughness: 0.72,
+      metalness: 0.06,
+    }),
+    shutter: atlasMaterial(atlasPanels.shutters, {
+      color: 0xb6b0a7,
+      roughness: 0.58,
+      metalness: 0.24,
+    }),
+    acPanel: atlasMaterial(atlasPanels.acUnits, {
+      color: 0xd0d4d2,
+      roughness: 0.56,
+      metalness: 0.2,
+    }),
+    shopfront: atlasMaterial(atlasPanels.shopfront, {
+      color: 0xeaf7f4,
+      roughness: 0.25,
+      metalness: 0.18,
+      emissive: 0x1a5a55,
+      emissiveIntensity: 0.2,
+    }),
+    poster: atlasMaterial(atlasPanels.busPoster, {
+      color: 0xffd0d6,
+      roughness: 0.42,
+      metalness: 0.08,
+      emissive: 0x401018,
+      emissiveIntensity: 0.12,
+    }),
+    neonTube: atlasMaterial(atlasPanels.tubes, {
+      color: 0xffffff,
+      roughness: 0.18,
+      metalness: 0.12,
+      emissive: 0xff365d,
+      emissiveIntensity: 0.9,
+      toneMapped: false,
+    }),
   };
 }
 
@@ -499,7 +500,7 @@ function setupLights() {
   streetFill.position.set(8, 7, 18);
   scene.add(streetFill);
 
-  const cameraFill = new THREE.PointLight(0xeaffff, 0.85, 8, 2.2);
+  const cameraFill = new THREE.PointLight(0xeaffff, 2.2, 10, 2.2);
   cameraFill.position.set(0, 0.35, -0.8);
   camera.add(cameraFill);
   scene.add(camera);
@@ -784,6 +785,7 @@ function createBuildings(side) {
     building.castShadow = true;
     building.receiveShadow = true;
     scene.add(building);
+    addAtlasFacadeDetails(side, x - side * (depth / 2 + 0.025), centerZ, width, height, index);
 
     if (rng() > 0.52) {
       addShopfront(side, x - side * (depth / 2 + 0.015), centerZ, width, index);
@@ -805,12 +807,7 @@ function createBuildings(side) {
 
 function createPhotoFacadeCards(side) {
   for (let i = 0; i < 4; i += 1) {
-    const texture = generatedAssets.street.clone();
-    texture.needsUpdate = true;
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    texture.repeat.set(0.22 + rng() * 0.14, 0.34 + rng() * 0.2);
-    texture.offset.set(rng() * (1 - texture.repeat.x), rng() * (1 - texture.repeat.y));
+    const texture = atlasTexture(i % 2 === 0 ? atlasPanels.concreteWall : atlasPanels.neonCluster);
     const material = new THREE.MeshBasicMaterial({
       map: texture,
       color: side < 0 ? 0xc8fffb : 0xffd2dc,
@@ -827,7 +824,50 @@ function createPhotoFacadeCards(side) {
   }
 }
 
+function addAtlasFacadeDetails(side, x, z, width, height, index) {
+  const panelChoices = [
+    atlasPanels.neonCluster,
+    atlasPanels.cableWall,
+    atlasPanels.acUnits,
+    atlasPanels.wallPosters,
+    atlasPanels.verticalSign,
+  ];
+  const count = clamp(Math.floor(height / 11), 1, 3);
+  for (let i = 0; i < count; i += 1) {
+    const panel = panelChoices[(index + i) % panelChoices.length];
+    const material = atlasMaterial(panel, {
+      color: side < 0 ? 0xd9fffb : 0xffd8e4,
+      roughness: 0.42,
+      metalness: 0.12,
+      emissive: i === 0 ? (side < 0 ? 0x062d2a : 0x300914) : 0x000000,
+      emissiveIntensity: i === 0 ? 0.16 : 0,
+      transparent: true,
+      opacity: 0.72,
+      side: THREE.DoubleSide,
+    });
+    const h = 1.2 + rng() * 2.8;
+    const w = Math.min(width * 0.54, 1.4 + rng() * 2.4);
+    const detail = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
+    detail.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+    detail.position.set(x, 2.2 + rng() * Math.max(2, height - 5), z + (rng() - 0.5) * width * 0.55);
+    detail.renderOrder = 2;
+    scene.add(detail);
+  }
+}
+
 function createFacadeMaterial(index, side, height) {
+  if (!visualMode.generatedScene) {
+    const material = atlasMaterial(index % 3 === 0 ? atlasPanels.concreteWall : atlasPanels.tileWall, {
+      color: side < 0 ? 0x9bb8ba : 0xb6a3aa,
+      roughness: 0.7,
+      metalness: 0.08,
+      emissive: side < 0 ? 0x061d20 : 0x240a12,
+      emissiveIntensity: 0.22,
+    });
+    material.normalScale = new THREE.Vector2(0.45, 0.45);
+    return material;
+  }
+
   const palettes = [
     ["#24313a", "#475763", "#f6d384"],
     ["#1f272d", "#5a5f63", "#bfe4ff"],
@@ -885,6 +925,21 @@ function addShopfront(side, x, z, width, index) {
     ["霓虹便利", "MART", "#e84b8a", "#fff2b0"],
   ];
   const signData = signs[index % signs.length];
+  const storefront = new THREE.Mesh(
+    new THREE.PlaneGeometry(Math.min(5.0, width * 0.78), 2.15),
+    atlasMaterial(index % 2 === 0 ? atlasPanels.shopfront : atlasPanels.shutters, {
+      color: 0xe4f0ee,
+      roughness: 0.34,
+      metalness: 0.16,
+      emissive: index % 2 === 0 ? 0x122b28 : 0x000000,
+      emissiveIntensity: index % 2 === 0 ? 0.1 : 0,
+      side: THREE.DoubleSide,
+    }),
+  );
+  storefront.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+  storefront.position.set(x - side * 0.015, 1.45, z);
+  scene.add(storefront);
+
   const signTexture = createSignTexture(signData[0], signData[1], signData[2], signData[3], 512, 192);
   const sign = new THREE.Mesh(
     new THREE.PlaneGeometry(Math.min(5.2, width * 0.74), 1.05),
@@ -896,11 +951,7 @@ function addShopfront(side, x, z, width, index) {
 
   const shutter = new THREE.Mesh(
     new THREE.BoxGeometry(0.06, 2.1, Math.min(4.8, width * 0.68)),
-    new THREE.MeshStandardMaterial({
-      color: 0x515860,
-      roughness: 0.54,
-      metalness: 0.24,
-    }),
+    materials.shutter,
   );
   shutter.position.set(x + side * 0.05, 1.25, z);
   shutter.castShadow = true;
@@ -1504,10 +1555,13 @@ async function attachRiggedActor(actor, options) {
 
       const materialsToTune = Array.isArray(node.material) ? node.material : [node.material];
       for (const material of materialsToTune) {
-        if (material.color) material.color.copy(tint).lerp(new THREE.Color(0xffffff), options.role === "player" ? 0.22 : 0.18);
-        if ("roughness" in material) material.roughness = Math.min(0.78, Math.max(0.42, material.roughness ?? 0.58));
-        if ("metalness" in material) material.metalness = Math.max(material.metalness ?? 0, 0.24);
-        if (material.emissive) material.emissive.copy(accent).multiplyScalar(0.05);
+        const baseMap = options.role === "player" ? characterPanels.armorPlate : characterPanels.gunmetal;
+        if (material.color) material.color.setHex(options.role === "player" ? 0xd7e5e6 : 0xc698a8);
+        if ("map" in material) material.map = characterTexture(baseMap);
+        if ("roughness" in material) material.roughness = options.role === "player" ? 0.32 : 0.38;
+        if ("metalness" in material) material.metalness = options.role === "player" ? 0.34 : 0.28;
+        if ("envMapIntensity" in material) material.envMapIntensity = 1.15;
+        if (material.emissive) material.emissive.copy(accent).multiplyScalar(options.role === "player" ? 0.24 : 0.18);
         rigMaterials.push(material);
       }
     });
@@ -1567,14 +1621,28 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex) {
     toneMapped: false,
   });
   const metal = new THREE.MeshStandardMaterial({
-    color: 0x090d11,
-    roughness: 0.25,
+    color: 0x9aa2a5,
+    map: characterTexture(characterPanels.gunmetal),
+    roughness: 0.22,
     metalness: 0.78,
+    emissive: role === "player" ? 0x06191b : 0x1b070d,
+    emissiveIntensity: 0.22,
+  });
+  const armor = new THREE.MeshStandardMaterial({
+    color: role === "player" ? 0x9aa9ad : 0x8e6975,
+    map: characterTexture(role === "player" ? characterPanels.armorPlate : characterPanels.carbonFiber),
+    roughness: 0.28,
+    metalness: 0.58,
+    emissive: role === "player" ? 0x071c1f : 0x22070f,
+    emissiveIntensity: 0.26,
   });
   const coat = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0x13232a : 0x241018,
-    roughness: 0.48,
-    metalness: 0.26,
+    color: role === "player" ? 0x849094 : 0x815b67,
+    map: characterTexture(role === "player" ? characterPanels.wetCoat : characterPanels.tacticalFabric),
+    roughness: 0.34,
+    metalness: 0.22,
+    emissive: role === "player" ? 0x061617 : 0x18070c,
+    emissiveIntensity: 0.28,
     transparent: true,
     opacity: 0.78,
     depthWrite: false,
@@ -1589,8 +1657,11 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex) {
     return mesh;
   };
 
-  add(new THREE.BoxGeometry(0.34, 0.16, 0.52), coat, [-0.48, 1.52, 0.01], [0, 0, -0.16]);
-  add(new THREE.BoxGeometry(0.34, 0.16, 0.52), coat, [0.48, 1.52, 0.01], [0, 0, 0.16]);
+  add(new THREE.BoxGeometry(0.46, 0.46, 0.045), armor, [0, 1.32, 0.43], [-0.08, 0, 0]);
+  add(new THREE.BoxGeometry(0.34, 0.16, 0.52), armor, [-0.48, 1.52, 0.01], [0, 0, -0.16]);
+  add(new THREE.BoxGeometry(0.34, 0.16, 0.52), armor, [0.48, 1.52, 0.01], [0, 0, 0.16]);
+  add(new THREE.BoxGeometry(0.19, 0.36, 0.055), coat, [-0.18, 0.66, 0.31], [-0.08, 0.04, 0.08]);
+  add(new THREE.BoxGeometry(0.19, 0.36, 0.055), coat, [0.18, 0.66, 0.31], [-0.08, -0.04, -0.08]);
   add(new THREE.BoxGeometry(0.09, 0.68, 0.035), neon, [0, 1.34, 0.43]);
   add(new THREE.BoxGeometry(0.42, 0.055, 0.035), role === "player" ? neon : neonSecondary, [0, 1.78, 0.27]);
   add(new THREE.BoxGeometry(0.028, 0.76, 0.03), neonSecondary, [-0.26, 1.22, 0.37], [0, 0, -0.1]);
@@ -1792,16 +1863,17 @@ function createPlayer() {
   const model = new THREE.Group();
   group.add(model);
 
-  const skin = new THREE.MeshStandardMaterial({ color: 0xcaa37f, roughness: 0.48, metalness: 0.02 });
+  const skin = new THREE.MeshStandardMaterial({ color: 0x9d8064, roughness: 0.5, metalness: 0.04 });
   const hair = new THREE.MeshStandardMaterial({ color: 0x16110f, roughness: 0.6, metalness: 0.04 });
-  const boot = new THREE.MeshStandardMaterial({ color: 0x08090b, roughness: 0.52, metalness: 0.18 });
+  const boot = new THREE.MeshStandardMaterial({
+    color: 0x0d0f10,
+    map: characterTexture(characterPanels.blackRubber),
+    roughness: 0.46,
+    metalness: 0.16,
+  });
   const cloth = materials.playerCoat;
   const trim = materials.playerAccent;
-  const shoulderMaterial = new THREE.MeshStandardMaterial({
-    color: 0x202833,
-    roughness: 0.28,
-    metalness: 0.55,
-  });
+  const shoulderMaterial = materials.playerArmor;
 
   const torso = makePart(
     model,
