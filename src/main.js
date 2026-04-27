@@ -35,7 +35,7 @@ renderer.setPixelRatio(getRenderPixelRatio());
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.18;
+renderer.toneMappingExposure = 1.34;
 renderer.shadowMap.enabled = renderSettings.realtimeShadows;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -491,7 +491,7 @@ function createMaterials() {
 }
 
 function setupLights() {
-  const hemi = new THREE.HemisphereLight(0xcde7ff, 0x281319, 2.85);
+  const hemi = new THREE.HemisphereLight(0xcde7ff, 0x281319, 3.25);
   scene.add(hemi);
 
   const moon = new THREE.DirectionalLight(0xc8ddff, 1.55);
@@ -508,11 +508,11 @@ function setupLights() {
 
   addBudgetPointLight(0x3ee7de, 1.8, 38, 1.8, -11, 7, -70);
 
-  const streetFill = new THREE.DirectionalLight(0x7ffcf2, 0.7);
+  const streetFill = new THREE.DirectionalLight(0x7ffcf2, 0.95);
   streetFill.position.set(8, 7, 18);
   scene.add(streetFill);
 
-  const cameraFill = new THREE.PointLight(0xeaffff, 2.2, 10, 2.2);
+  const cameraFill = new THREE.PointLight(0xeaffff, 2.85, 10, 2.2);
   cameraFill.position.set(0, 0.35, -0.8);
   camera.add(cameraFill);
   scene.add(camera);
@@ -560,10 +560,9 @@ function createHongKongStreet() {
     scene.add(curb);
   }
 
+  createHeroBattleBlock();
   createBuildings(-1);
   createBuildings(1);
-  createPhotoFacadeCards(-1);
-  createPhotoFacadeCards(1);
   createWetStreetDetails();
   createBakedLightField();
   createOpeningNeon();
@@ -586,6 +585,240 @@ function createGeneratedSceneLighting() {
     addGroundReflection(x, z, color, width, depth, x < 0 ? -1 : 1);
     addBudgetPointLight(color, 0.55, 10, 2, x, 2.5, z);
   }
+}
+
+function createHeroBattleBlock() {
+  const bays = [
+    { z: 30.5, width: 5.4, main: "霓虹茶餐廳", sub: "NIGHT CAFE", color: "#ff365d", panel: atlasPanels.shopfront },
+    { z: 38.4, width: 4.7, main: "港島藥房", sub: "PHARMACY", color: "#24d8cf", panel: atlasPanels.shutters },
+    { z: 46.2, width: 5.2, main: "手機維修", sub: "REPAIR", color: "#ffdf68", panel: atlasPanels.shopfront },
+  ];
+
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < bays.length; i += 1) {
+      const bay = bays[(i + (side > 0 ? 1 : 0)) % bays.length];
+      createHeroShopBay(side, bay.z + (side > 0 ? -1.7 : 0.8), bay.width, i, bay);
+    }
+    createHeroFacadeStack(side);
+  }
+
+  createHeroRoadDetails();
+  createHeroCableCanopy();
+  createHeroGatewaySign();
+}
+
+function createHeroShopBay(side, z, width, index, bay) {
+  const facadeX = side * 6.45;
+  const faceRotation = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+  const signColor = bay.color;
+  const group = new THREE.Group();
+  group.position.set(facadeX, 0, z);
+  scene.add(group);
+
+  const wall = new THREE.Mesh(
+    new THREE.BoxGeometry(0.34, 4.9, width + 0.7),
+    index % 2 === 0 ? materials.facadeConcrete : atlasMaterial(atlasPanels.tileWall, { color: 0xb8c3c2, roughness: 0.68 }),
+  );
+  wall.position.set(side * 0.16, 2.45, 0);
+  wall.castShadow = true;
+  wall.receiveShadow = true;
+  group.add(wall);
+
+  const recess = new THREE.Mesh(
+    new THREE.BoxGeometry(0.28, 2.45, width * 0.72),
+    new THREE.MeshStandardMaterial({ color: 0x06090b, roughness: 0.46, metalness: 0.18 }),
+  );
+  recess.position.set(-side * 0.02, 1.36, -0.1);
+  recess.castShadow = true;
+  recess.receiveShadow = true;
+  group.add(recess);
+
+  const shutter = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 2.15, width * 0.44),
+    index % 2 === 0 ? materials.shutter : materials.shopfront,
+  );
+  shutter.position.set(-side * 0.2, 1.38, -width * 0.13);
+  shutter.castShadow = true;
+  shutter.receiveShadow = true;
+  group.add(shutter);
+
+  const glass = new THREE.Mesh(
+    new THREE.BoxGeometry(0.06, 1.85, width * 0.28),
+    materials.glass,
+  );
+  glass.position.set(-side * 0.24, 1.46, width * 0.22);
+  glass.castShadow = true;
+  glass.receiveShadow = true;
+  group.add(glass);
+
+  const canopy = new THREE.Mesh(
+    new THREE.BoxGeometry(1.22, 0.14, width + 0.35),
+    new THREE.MeshStandardMaterial({ color: index % 2 === 0 ? 0x1a3031 : 0x34151f, roughness: 0.34, metalness: 0.36 }),
+  );
+  canopy.position.set(-side * 0.62, 2.72, 0);
+  canopy.rotation.z = side * 0.06;
+  canopy.castShadow = true;
+  canopy.receiveShadow = true;
+  group.add(canopy);
+
+  const signBack = new THREE.Mesh(
+    new THREE.BoxGeometry(0.3, 0.92, width * 0.82),
+    new THREE.MeshStandardMaterial({
+      color: 0x090c0f,
+      roughness: 0.28,
+      metalness: 0.58,
+      emissive: new THREE.Color(signColor),
+      emissiveIntensity: 0.08,
+    }),
+  );
+  signBack.position.set(-side * 0.36, 3.33, 0);
+  signBack.castShadow = true;
+  group.add(signBack);
+
+  const signTexture = createSignTexture(bay.main, bay.sub, signColor, "#fff6cf", 640, 210);
+  const sign = new THREE.Mesh(
+    new THREE.PlaneGeometry(width * 0.76, 0.76),
+    trackNeonMaterial(new THREE.MeshBasicMaterial({ map: signTexture, transparent: true, toneMapped: false, side: THREE.DoubleSide }), 0.92),
+  );
+  sign.rotation.y = faceRotation;
+  sign.position.set(-side * 0.53, 3.34, 0);
+  group.add(sign);
+
+  const rollBars = new THREE.Group();
+  const barMaterial = new THREE.MeshStandardMaterial({ color: 0x171d20, roughness: 0.32, metalness: 0.72 });
+  for (let j = 0; j < 6; j += 1) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.035, 1.96, 0.035), barMaterial);
+    bar.position.set(-side * 0.285, 1.42, -width * 0.28 + j * width * 0.1);
+    bar.castShadow = true;
+    rollBars.add(bar);
+  }
+  group.add(rollBars);
+
+  for (let j = 0; j < 3; j += 1) {
+    const pipe = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.035, 2.4 + j * 0.35, 10),
+      new THREE.MeshStandardMaterial({ color: 0x11171a, roughness: 0.4, metalness: 0.5 }),
+    );
+    pipe.position.set(-side * (0.42 + j * 0.045), 2.2 + j * 0.22, -width * 0.46 + j * 0.24);
+    pipe.castShadow = true;
+    group.add(pipe);
+  }
+
+  const sideSign = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 2.0, 0.76),
+    new THREE.MeshStandardMaterial({
+      color: 0x08090b,
+      roughness: 0.2,
+      metalness: 0.5,
+      emissive: new THREE.Color(signColor),
+      emissiveIntensity: 0.12,
+    }),
+  );
+  sideSign.position.set(-side * 0.72, 3.05, width * 0.46);
+  sideSign.castShadow = true;
+  group.add(sideSign);
+
+  const sideTexture = createSignTexture(index % 2 === 0 ? "雨夜" : "電器", bay.sub, signColor, "#fff8d4", 256, 512, true);
+  const sideFace = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.62, 1.74),
+    trackNeonMaterial(new THREE.MeshBasicMaterial({ map: sideTexture, transparent: true, toneMapped: false, side: THREE.DoubleSide }), 0.86),
+  );
+  sideFace.position.set(-side * 0.83, 3.05, width * 0.46);
+  sideFace.rotation.y = faceRotation;
+  group.add(sideFace);
+
+  addGroundReflection(facadeX - side * 1.0, z, signColor, width * 0.86, 2.6, side);
+  addBudgetPointLight(signColor, 0.9, 8.5, 2, facadeX - side * 0.9, 3.0, z);
+}
+
+function createHeroFacadeStack(side) {
+  const facadeX = side * 6.9;
+  const material = new THREE.MeshStandardMaterial({ color: 0x182024, roughness: 0.52, metalness: 0.28 });
+  for (let floor = 0; floor < 3; floor += 1) {
+    const y = 4.25 + floor * 1.55;
+    const z = 28 + floor * 4.8;
+    const balcony = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.12, 3.0), material);
+    balcony.position.set(facadeX - side * 0.44, y, z);
+    balcony.castShadow = true;
+    scene.add(balcony);
+
+    for (let i = 0; i < 4; i += 1) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.82, 0.045), material);
+      rail.position.set(facadeX - side * 0.7, y - 0.28, z - 1.12 + i * 0.74);
+      rail.castShadow = true;
+      scene.add(rail);
+    }
+
+    const ac = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.34, 0.72), materials.acPanel);
+    ac.position.set(facadeX - side * 0.5, y + 0.38, z + 1.55);
+    ac.castShadow = true;
+    scene.add(ac);
+  }
+}
+
+function createHeroRoadDetails() {
+  const drainMaterial = new THREE.MeshStandardMaterial({ color: 0x080a0b, roughness: 0.28, metalness: 0.75 });
+  const slitMaterial = new THREE.MeshBasicMaterial({ color: 0x17272a, transparent: true, opacity: 0.72 });
+  for (const side of [-1, 1]) {
+    for (const z of [25.5, 35.5, 45.5]) {
+      const drain = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.035, 3.2), drainMaterial);
+      drain.position.set(side * 4.36, 0.055, z);
+      drain.receiveShadow = true;
+      scene.add(drain);
+      for (let i = 0; i < 7; i += 1) {
+        const slit = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.035), slitMaterial);
+        slit.rotation.x = -Math.PI / 2;
+        slit.position.set(side * 4.36, 0.078, z - 1.2 + i * 0.4);
+        scene.add(slit);
+      }
+    }
+  }
+
+  for (const [x, z, color] of [[-1.7, 35.5, "#2df4ed"], [2.0, 42.5, "#ff365d"], [0.2, 29.0, "#ffe072"]]) {
+    addGroundReflection(x, z, color, 3.2, 4.0, x < 0 ? -1 : 1);
+  }
+}
+
+function createHeroCableCanopy() {
+  const cableMaterial = new THREE.MeshStandardMaterial({ color: 0x030506, roughness: 0.42, metalness: 0.34 });
+  for (let i = 0; i < 10; i += 1) {
+    const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.014 + (i % 3) * 0.005, 0.014 + (i % 3) * 0.005, 15.2, 8), cableMaterial);
+    cable.rotation.z = Math.PI / 2;
+    cable.rotation.y = (rng() - 0.5) * 0.16;
+    cable.position.set(0, 4.6 + i * 0.22, 27 + i * 2.15);
+    cable.castShadow = true;
+    scene.add(cable);
+  }
+}
+
+function createHeroGatewaySign() {
+  const signTexture = createSignTexture("廟街雨戰", "TEMPLE ST. RAIN", "#ff365d", "#fff3c6", 896, 256);
+  const sign = new THREE.Mesh(
+    new THREE.PlaneGeometry(6.6, 1.35),
+    trackNeonMaterial(new THREE.MeshBasicMaterial({ map: signTexture, transparent: true, toneMapped: false, side: THREE.DoubleSide }), 0.92),
+  );
+  sign.position.set(0, 4.45, 36.5);
+  scene.add(sign);
+
+  const frame = createNeonFrame(6.95, 1.62, 0.08);
+  frame.position.set(0, 4.45, 36.58);
+  scene.add(frame);
+
+  const bracketMaterial = new THREE.MeshStandardMaterial({ color: 0x15191d, roughness: 0.3, metalness: 0.72 });
+  for (const side of [-1, 1]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.13, 2.2, 0.13), bracketMaterial);
+    post.position.set(side * 4.55, 3.35, 36.58);
+    post.castShadow = true;
+    scene.add(post);
+
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.1, 0.1), bracketMaterial);
+    arm.position.set(side * 4.05, 4.95, 36.58);
+    arm.castShadow = true;
+    scene.add(arm);
+  }
+
+  addBudgetPointLight("#ff365d", 1.1, 10, 2, 0, 4.1, 36.2);
+  addGroundReflection(0, 36.1, "#ff365d", 6.0, 3.8, 1);
 }
 
 function createGeneratedBackdrop() {
@@ -2051,7 +2284,7 @@ function createSlashEffect() {
 }
 
 function createRainSystem() {
-  const count = window.innerWidth < 760 ? 720 : 980;
+  const count = window.innerWidth < 760 ? 520 : 680;
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i += 1) {
     positions[i * 3] = -34 + rng() * 68;
