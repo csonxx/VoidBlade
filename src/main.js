@@ -370,9 +370,9 @@ function createMaterials() {
       metalness: 0.04,
     }),
     curb: new THREE.MeshStandardMaterial({
-      color: 0x6f7370,
-      roughness: 0.55,
-      metalness: 0.08,
+      color: 0x30383a,
+      roughness: 0.44,
+      metalness: 0.18,
     }),
     playerCoat: new THREE.MeshStandardMaterial({
       color: 0x22282d,
@@ -474,6 +474,18 @@ function createMaterials() {
       emissive: 0xff365d,
       emissiveIntensity: 0.9,
       toneMapped: false,
+    }),
+    streetBin: atlasMaterial(atlasPanels.shutters, {
+      color: 0x324345,
+      roughness: 0.5,
+      metalness: 0.28,
+    }),
+    streetBinLabel: atlasMaterial(atlasPanels.wallPosters, {
+      color: 0xd5f4ee,
+      roughness: 0.42,
+      metalness: 0.08,
+      emissive: 0x061d1c,
+      emissiveIntensity: 0.1,
     }),
   };
 }
@@ -607,13 +619,13 @@ function addRoadPaint() {
   const paintMaterial = new THREE.MeshBasicMaterial({
     color: 0xd7d0b9,
     transparent: true,
-    opacity: 0.54,
+    opacity: 0.34,
     depthWrite: false,
   });
 
   for (let z = -58; z < 46; z += 26) {
     for (let i = -4; i <= 4; i += 1) {
-      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 4.1), paintMaterial);
+      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 3.35), paintMaterial);
       stripe.rotation.x = -Math.PI / 2;
       stripe.position.set(i * 1.0, 0.018, z);
       scene.add(stripe);
@@ -633,7 +645,7 @@ function addRoadPaint() {
   const slowMaterial = new THREE.MeshBasicMaterial({
     map: slowTexture,
     transparent: true,
-    opacity: 0.46,
+    opacity: 0.36,
     depthWrite: false,
   });
   const slow = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), slowMaterial);
@@ -667,7 +679,7 @@ function createWetStreetDetails() {
     new THREE.MeshBasicMaterial({
       map: sheenTexture,
       transparent: true,
-      opacity: 0.42,
+      opacity: 0.32,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       toneMapped: false,
@@ -806,20 +818,21 @@ function createBuildings(side) {
 }
 
 function createPhotoFacadeCards(side) {
-  for (let i = 0; i < 4; i += 1) {
+  for (let i = 0; i < 3; i += 1) {
     const texture = atlasTexture(i % 2 === 0 ? atlasPanels.concreteWall : atlasPanels.neonCluster);
     const material = new THREE.MeshBasicMaterial({
       map: texture,
       color: side < 0 ? 0xc8fffb : 0xffd2dc,
       transparent: true,
-      opacity: 0.46 + rng() * 0.1,
+      opacity: 0.2 + rng() * 0.06,
       depthWrite: false,
       toneMapped: false,
       side: THREE.DoubleSide,
     });
-    const card = new THREE.Mesh(new THREE.PlaneGeometry(16 + rng() * 6, 13 + rng() * 9), material);
+    const card = new THREE.Mesh(new THREE.PlaneGeometry(8 + rng() * 4, 7 + rng() * 4), material);
     card.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
-    card.position.set(side * (7.22 + rng() * 0.25), 6.1 + rng() * 3.2, world.streetMinZ + 11 + i * 32 + rng() * 5);
+    card.position.set(side * (7.65 + rng() * 0.45), 7.0 + rng() * 4.4, world.streetMinZ + 16 + i * 39 + rng() * 5);
+    card.renderOrder = -1;
     scene.add(card);
   }
 }
@@ -1138,21 +1151,37 @@ function createStreetProps() {
     addStreetLamp(5.55, z + 7 + rng() * 4, -1);
   }
 
-  for (let i = 0; i < 12; i += 1) {
+  for (let i = 0; i < 8; i += 1) {
     const side = rng() > 0.5 ? 1 : -1;
-    const trash = new THREE.Mesh(
-      new THREE.BoxGeometry(0.52, 0.72, 0.48),
-      new THREE.MeshStandardMaterial({
-        color: rng() > 0.5 ? 0x225249 : 0x30363a,
-        roughness: 0.54,
-        metalness: 0.18,
-      }),
-    );
-    trash.position.set(side * (5.8 + rng() * 1.2), 0.55, -72 + rng() * 112);
-    trash.castShadow = true;
-    trash.receiveShadow = true;
-    scene.add(trash);
+    createStreetBin(side * (5.9 + rng() * 1.1), -72 + rng() * 112, side);
   }
+}
+
+function createStreetBin(x, z, side) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  group.rotation.y = side > 0 ? -0.08 : 0.08;
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.78, 0.5), materials.streetBin);
+  body.position.y = 0.48;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  const lid = new THREE.Mesh(
+    new THREE.BoxGeometry(0.68, 0.08, 0.58),
+    new THREE.MeshStandardMaterial({ color: 0x151a1c, roughness: 0.38, metalness: 0.42 }),
+  );
+  lid.position.y = 0.9;
+  lid.castShadow = true;
+  group.add(lid);
+
+  const label = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.24), materials.streetBinLabel);
+  label.position.set(0, 0.58, side > 0 ? -0.256 : 0.256);
+  label.rotation.y = side > 0 ? Math.PI : 0;
+  group.add(label);
+
+  scene.add(group);
 }
 
 function createMovingTraffic() {
@@ -1574,6 +1603,7 @@ async function attachRiggedActor(actor, options) {
     box.setFromObject(root);
     const center = box.getCenter(new THREE.Vector3());
     root.position.set(-center.x, -box.min.y, -center.z);
+    root.rotation.y = Math.PI;
 
     const mixer = new THREE.AnimationMixer(root);
     const actions = {};
@@ -2187,8 +2217,9 @@ function updatePlayer(dt) {
     player.combo = 0;
   }
 
-  forwardV.set(-Math.sin(cameraRig.yaw), 0, -Math.cos(cameraRig.yaw)).normalize();
-  rightV.set(Math.cos(cameraRig.yaw), 0, -Math.sin(cameraRig.yaw)).normalize();
+  const cameraForwardYaw = cameraRig.yaw + Math.PI;
+  forwardV.set(Math.sin(cameraForwardYaw), 0, Math.cos(cameraForwardYaw)).normalize();
+  rightV.set(Math.sin(cameraForwardYaw - Math.PI / 2), 0, Math.cos(cameraForwardYaw - Math.PI / 2)).normalize();
 
   const desired = tmpV3.set(0, 0, 0);
   if (input.forward) desired.add(forwardV);
