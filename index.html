@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoidBlade: Neon Harbour</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas" aria-label="VoidBlade 3D action game"></canvas>
+
+      <div class="hud hud-top-left">
+        <div class="brand-lockup">
+          <span class="brand-mark"></span>
+          <div>
+            <p class="brand-name">霓刃</p>
+            <p class="brand-zone">VOIDBLADE · 港島雨戰</p>
+          </div>
+        </div>
+        <div class="bars">
+          <div class="bar-frame health">
+            <span class="bar-label">命脈</span>
+            <span class="bar-fill" id="health-fill"></span>
+          </div>
+          <div class="bar-frame stamina">
+            <span class="bar-label">電荷</span>
+            <span class="bar-fill" id="stamina-fill"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud hud-top-right">
+        <div class="readout">
+          <span>波次</span>
+          <strong id="wave-readout">1</strong>
+        </div>
+        <div class="readout">
+          <span>敵影</span>
+          <strong id="enemy-readout">0</strong>
+        </div>
+        <div class="readout">
+          <span>連斬</span>
+          <strong id="combo-readout">0</strong>
+        </div>
+      </div>
+
+      <div class="hud center-reticle" id="reticle"></div>
+      <div class="hud encounter-banner" id="encounter-banner">CONTACT</div>
+      <div class="hud damage-vignette" id="damage-vignette"></div>
+      <div class="hud status-strip" id="status-strip">彌敦道 雨夜巡邏</div>
+
+      <button id="start-button" class="start-button" type="button">
+        <span>落場</span>
+      </button>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

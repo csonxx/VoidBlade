@@ -1,0 +1,8 @@
+node_modules/
+dist/
+artifacts/
+.npm-cache/
+.venv/
+.DS_Store
+src/assets/player-samurai.png
+src/assets/enemy-enforcer.png
