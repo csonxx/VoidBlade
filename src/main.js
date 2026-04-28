@@ -446,6 +446,11 @@ function damp(current, target, lambda, dt) {
   return THREE.MathUtils.damp(current, target, lambda, dt);
 }
 
+function smoothstep01(value) {
+  const t = clamp(value, 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
 function canvasTexture(width, height, draw) {
   const c = document.createElement("canvas");
   c.width = width;
@@ -2385,8 +2390,13 @@ async function attachRiggedActor(actor, options) {
     const palette = resolveActorPalette(options.role, options.level, options.palette);
     const accent = new THREE.Color(options.accent ?? palette.accent);
     const rigMaterials = [];
+    const rigBones = {};
 
     root.traverse((node) => {
+      if (node.isBone) {
+        rigBones[node.name] = node;
+        return;
+      }
       if (!node.isMesh) return;
       node.castShadow = true;
       node.receiveShadow = true;
@@ -2438,6 +2448,8 @@ async function attachRiggedActor(actor, options) {
     actor.rigWeapon = kit.userData.weapon;
     actor.rigMaterials = rigMaterials;
     actor.gltfBasePosition = root.position.clone();
+    actor.gltfBaseRotation = root.rotation.clone();
+    actor.rigBones = rigBones;
     actor.model.visible = false;
     actor.billboard.group.visible = false;
     setActorAction(actor, "Idle", 0);
@@ -2645,7 +2657,7 @@ function setActorAction(actor, actionName, fade = 0.18) {
   if (!next || actor.currentAction === next) return;
 
   next.enabled = true;
-  next.timeScale = actionName === "Run" ? 1.18 : actionName === "Walk" ? 1.1 : 1;
+  next.timeScale = actor.attack ? (actor.attack.type === "heavy" ? 0.92 : 1.34) : actionName === "Run" ? 1.18 : actionName === "Walk" ? 1.1 : 1;
   next.reset().fadeIn(fade).play();
   if (actor.currentAction) actor.currentAction.fadeOut(fade);
   actor.currentAction = next;
@@ -2667,11 +2679,13 @@ function resetRiggedPose(actor, dt) {
   if (actor.gltfRoot) {
     actor.gltfRoot.position.x = damp(actor.gltfRoot.position.x, actor.gltfBasePosition?.x ?? 0, 12, dt);
     actor.gltfRoot.position.z = damp(actor.gltfRoot.position.z, actor.gltfBasePosition?.z ?? 0, 12, dt);
-    actor.gltfRoot.rotation.x = damp(actor.gltfRoot.rotation.x, 0, 12, dt);
-    actor.gltfRoot.rotation.z = damp(actor.gltfRoot.rotation.z, 0, 12, dt);
+    actor.gltfRoot.rotation.x = damp(actor.gltfRoot.rotation.x, actor.gltfBaseRotation?.x ?? 0, 12, dt);
+    actor.gltfRoot.rotation.y = damp(actor.gltfRoot.rotation.y, actor.gltfBaseRotation?.y ?? 0, 12, dt);
+    actor.gltfRoot.rotation.z = damp(actor.gltfRoot.rotation.z, actor.gltfBaseRotation?.z ?? 0, 12, dt);
   }
   if (actor.rigKit) {
     actor.rigKit.rotation.x = damp(actor.rigKit.rotation.x, 0, 12, dt);
+    actor.rigKit.rotation.y = damp(actor.rigKit.rotation.y, 0, 12, dt);
     actor.rigKit.rotation.z = damp(actor.rigKit.rotation.z, 0, 12, dt);
   }
 }
@@ -2679,14 +2693,62 @@ function resetRiggedPose(actor, dt) {
 function applyPlayerAttackPose(actor, progress, swing, type, dt) {
   if (!actor.gltfRoot) return;
   const heavy = type === "heavy";
-  const lean = heavy ? 0.2 : 0.13;
-  const recoil = Math.sin(progress * Math.PI * 2) * (heavy ? 0.16 : 0.1);
-  actor.gltfRoot.rotation.x = damp(actor.gltfRoot.rotation.x, -lean * swing, 18, dt);
-  actor.gltfRoot.rotation.z = damp(actor.gltfRoot.rotation.z, recoil, 18, dt);
-  actor.gltfRoot.position.z = damp(actor.gltfRoot.position.z, (actor.gltfBasePosition?.z ?? 0) + swing * (heavy ? 0.24 : 0.14), 18, dt);
+  const windup = 1 - smoothstep01(progress / (heavy ? 0.28 : 0.2));
+  const strike = smoothstep01((progress - (heavy ? 0.14 : 0.09)) / (heavy ? 0.46 : 0.36));
+  const recover = smoothstep01((progress - (heavy ? 0.56 : 0.5)) / (heavy ? 0.36 : 0.28));
+  const active = Math.sin(progress * Math.PI);
+  const snap = strike * (1 - recover * 0.72);
+  const baseRot = actor.gltfBaseRotation ?? { x: 0, y: Math.PI, z: 0 };
+  const basePos = actor.gltfBasePosition ?? { x: 0, z: 0 };
+  const lean = heavy ? 0.36 : 0.26;
+  const twist = (heavy ? 0.52 : 0.42) * (snap - windup * 0.34);
+  const recoil = Math.sin(progress * Math.PI * 2.15) * (heavy ? 0.22 : 0.16);
+  actor.gltfRoot.rotation.x = damp(actor.gltfRoot.rotation.x, baseRot.x - lean * active, 24, dt);
+  actor.gltfRoot.rotation.y = damp(actor.gltfRoot.rotation.y, baseRot.y + twist, 24, dt);
+  actor.gltfRoot.rotation.z = damp(actor.gltfRoot.rotation.z, baseRot.z + recoil, 22, dt);
+  actor.gltfRoot.position.x = damp(actor.gltfRoot.position.x, basePos.x + recoil * 0.12, 22, dt);
+  actor.gltfRoot.position.z = damp(actor.gltfRoot.position.z, basePos.z + active * (heavy ? 0.42 : 0.27), 24, dt);
   if (actor.rigKit) {
-    actor.rigKit.rotation.x = damp(actor.rigKit.rotation.x, -lean * swing * 0.8, 18, dt);
-    actor.rigKit.rotation.z = damp(actor.rigKit.rotation.z, recoil * 0.75, 18, dt);
+    actor.rigKit.rotation.x = damp(actor.rigKit.rotation.x, -lean * active * 0.78, 24, dt);
+    actor.rigKit.rotation.y = damp(actor.rigKit.rotation.y, twist * 0.7, 24, dt);
+    actor.rigKit.rotation.z = damp(actor.rigKit.rotation.z, recoil * 0.75, 22, dt);
+  }
+}
+
+function applyPlayerAttackBoneOverlay(actor) {
+  const attack = actor.attack;
+  const bones = actor.rigBones;
+  if (!attack || !bones) return;
+  const progress = clamp(attack.t / attack.duration, 0, 1);
+  const heavy = attack.type === "heavy";
+  const active = Math.sin(progress * Math.PI);
+  const strike = smoothstep01((progress - (heavy ? 0.16 : 0.1)) / (heavy ? 0.42 : 0.34));
+  const recover = smoothstep01((progress - (heavy ? 0.58 : 0.48)) / (heavy ? 0.34 : 0.28));
+  const snap = strike * (1 - recover);
+  const twist = (heavy ? 0.34 : 0.26) * (snap - 0.25);
+  const rightArm = bones["mixamorig:RightArm"];
+  const rightForeArm = bones["mixamorig:RightForeArm"];
+  const leftArm = bones["mixamorig:LeftArm"];
+  const spine = bones["mixamorig:Spine"];
+  const spine1 = bones["mixamorig:Spine1"];
+  const spine2 = bones["mixamorig:Spine2"];
+  if (spine) spine.rotation.y += twist * 0.38;
+  if (spine1) spine1.rotation.y += twist * 0.55;
+  if (spine2) {
+    spine2.rotation.y += twist * 0.42;
+    spine2.rotation.x -= active * (heavy ? 0.18 : 0.12);
+  }
+  if (rightArm) {
+    rightArm.rotation.z -= active * (heavy ? 0.54 : 0.42);
+    rightArm.rotation.x -= snap * (heavy ? 0.22 : 0.16);
+  }
+  if (rightForeArm) {
+    rightForeArm.rotation.z -= active * (heavy ? 0.46 : 0.34);
+    rightForeArm.rotation.x -= snap * (heavy ? 0.18 : 0.12);
+  }
+  if (leftArm) {
+    leftArm.rotation.z += active * 0.22;
+    leftArm.rotation.x += snap * 0.1;
   }
 }
 
@@ -2713,6 +2775,9 @@ function updateAnimatedActors(dt) {
       const base = part.userData.baseRotation;
       part.rotation.x = (base?.x ?? 0) + sway;
       part.rotation.z = (base?.z ?? 0) + sway * (part.position.x < 0 ? -0.55 : 0.55);
+    }
+    if (actor === player && actor.attack) {
+      applyPlayerAttackBoneOverlay(actor);
     }
   }
 }
@@ -3239,8 +3304,11 @@ function updatePlayer(dt) {
   player.model.position.y = bob;
   if (visualMode.actors3D) {
     const actionName = player.dashTimer > 0 ? "Run" : moving ? (input.sprint ? "Run" : "Walk") : "Idle";
-    setActorAction(player, player.attack ? (moving ? "Run" : "Idle") : actionName);
-    setRiggedActorFlash(player, player.hitPulse > 0 ? 1.15 : 0, player.hitPulse > 0 ? 0xff2f6d : 0x2df4ed);
+    setActorAction(player, player.attack ? "Run" : actionName, player.attack ? 0.06 : 0.18);
+    if (player.attack && player.currentAction) {
+      player.currentAction.timeScale = player.attack.type === "heavy" ? 0.9 : 1.42;
+    }
+    setRiggedActorFlash(player, player.hitPulse > 0 ? 0.18 : 0, player.hitPulse > 0 ? 0xffc46a : heroVisualPalette.accent);
     if (player.rigKit) player.rigKit.position.y = bob * 0.35;
   }
   if (!visualMode.actors3D) {
@@ -3256,9 +3324,9 @@ function updatePlayer(dt) {
       dt,
     });
     player.afterimageTimer = Math.max(0, player.afterimageTimer - dt);
-    if ((player.dashTimer > 0 || player.attack) && player.afterimageTimer <= 0) {
-      spawnActorAfterimage(player.billboard, player.group.position, 0x50fff3, player.attack ? 0.32 : 0.42);
-      player.afterimageTimer = player.attack ? 0.075 : 0.045;
+    if (player.dashTimer > 0 && player.afterimageTimer <= 0) {
+      spawnActorAfterimage(player.billboard, player.group.position, 0x50fff3, 0.42);
+      player.afterimageTimer = 0.045;
     }
   }
   player.torso.rotation.z = moving ? stride * 0.035 : Math.sin(elapsed * 1.6) * 0.012;
@@ -3343,17 +3411,20 @@ function updateCombat(dt) {
   attack.t += dt;
   const progress = clamp(attack.t / attack.duration, 0, 1);
   const swing = Math.sin(progress * Math.PI);
+  const strike = smoothstep01((progress - (attack.type === "heavy" ? 0.14 : 0.09)) / (attack.type === "heavy" ? 0.46 : 0.36));
+  const recover = smoothstep01((progress - (attack.type === "heavy" ? 0.56 : 0.5)) / (attack.type === "heavy" ? 0.36 : 0.28));
+  const snap = strike * (1 - recover * 0.7);
 
-  player.sword.rotation.set(-0.75 + swing * 1.35, -0.85 + progress * 1.6, -0.5 + swing * 0.95);
+  player.sword.rotation.set(-0.82 + swing * 1.54, -1.12 + strike * 2.06, -0.72 + snap * 1.22);
   applyPlayerAttackPose(player, progress, swing, attack.type, dt);
   if (player.rigWeapon) {
-    player.rigWeapon.position.set(0.55 + swing * 0.14, 0.98 + swing * 0.12, 0.18 + swing * 0.36);
-    player.rigWeapon.rotation.set(-0.92 + swing * 1.34, -0.98 + progress * 1.75, -0.72 + swing * 1.06);
+    player.rigWeapon.position.set(0.48 + snap * 0.32, 0.95 + swing * 0.18, 0.08 + swing * 0.55);
+    player.rigWeapon.rotation.set(-1.12 + swing * 1.68, -1.2 + strike * 2.32, -0.92 + snap * 1.32);
   }
-  player.rightArm.rotation.x = -0.65 + swing * 1.15;
-  player.rightArm.rotation.z = 0.22 + swing * 0.45;
-  player.leftArm.rotation.x = 0.24 - swing * 0.32;
-  player.torso.rotation.y = Math.sin(progress * Math.PI * 2) * 0.08;
+  player.rightArm.rotation.x = -0.72 + snap * 1.28;
+  player.rightArm.rotation.z = 0.22 + swing * 0.56;
+  player.leftArm.rotation.x = 0.24 - swing * 0.4;
+  player.torso.rotation.y = Math.sin(progress * Math.PI * 2) * 0.14;
   if (!visualMode.actors3D) {
     poseActorImpostor(player.billboard, {
       y: player.billboard.group.position.y,
@@ -3380,6 +3451,7 @@ function updateCombat(dt) {
 
   if (attack.t >= attack.duration) {
     player.attack = null;
+    setActorAction(player, "Idle", 0.08);
   }
 }
 
