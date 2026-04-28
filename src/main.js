@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import characterMaterialAtlasUrl from "./assets/character-material-atlas.png";
+import hkCinematicStreetUrl from "./assets/hk-cinematic-street.png";
 import hkCloseStreetAtlasUrl from "./assets/hk-close-street-atlas.png";
 import hkMaterialAtlasUrl from "./assets/hk-material-atlas.png";
 import hkRainStreetUrl from "./assets/hk-rain-street.png";
@@ -24,7 +25,7 @@ const renderSettings = {
   maxPixelRatio: window.innerWidth < 760 ? 0.66 : 0.62,
   realtimeShadows: false,
   maxScenePointLights: window.innerWidth < 760 ? 4 : 7,
-  maxRiggedEnemies: 1,
+  maxRiggedEnemies: window.innerWidth < 760 ? 1 : 3,
 };
 
 const renderer = new THREE.WebGLRenderer({
@@ -64,6 +65,7 @@ const world = {
 const visualMode = {
   generatedScene: false,
   actors3D: true,
+  photoDominant: true,
 };
 
 const input = {
@@ -90,6 +92,7 @@ const tmpV32 = new THREE.Vector3();
 const forwardV = new THREE.Vector3();
 const rightV = new THREE.Vector3();
 const generatedSceneOffset = new THREE.Vector2();
+const cinematicSceneOffset = new THREE.Vector2(0, 0);
 const textureLoader = new THREE.TextureLoader();
 const textureReadyPromises = [];
 const gltfLoader = new GLTFLoader();
@@ -164,6 +167,7 @@ const streetLife = {
   traffic: [],
 };
 let scenePointLightCount = 0;
+let cinematicBackdrop = null;
 
 const materials = createMaterials();
 const player = createPlayer();
@@ -303,6 +307,14 @@ function createGeneratedAssetTextures() {
     character: load(characterMaterialAtlasUrl),
     atlas: load(hkMaterialAtlasUrl),
     closeStreet: load(hkCloseStreetAtlasUrl),
+    cinematicStreet: (() => {
+      const texture = load(hkCinematicStreetUrl);
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.repeat.set(1, 1);
+      texture.offset.copy(cinematicSceneOffset);
+      return texture;
+    })(),
     street: (() => {
       const texture = load(hkRainStreetUrl);
       texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -387,8 +399,8 @@ function createMaterials() {
       map: atlasTexture(atlasPanels.wetRoad),
       normalMap: wetAsphaltMaps.normal,
       roughnessMap: wetAsphaltMaps.roughness,
-      transparent: visualMode.generatedScene,
-      opacity: visualMode.generatedScene ? 0.24 : 1,
+      transparent: true,
+      opacity: visualMode.generatedScene ? 0.24 : 0.82,
       roughness: 0.18,
       metalness: 0.34,
       envMapIntensity: 1.0,
@@ -641,6 +653,8 @@ function setupLights() {
 }
 
 function createHongKongStreet() {
+  createGeneratedBackdrop();
+
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(world.roadHalfWidth * 2, world.streetMaxZ - world.streetMinZ + 40),
     materials.asphalt,
@@ -682,17 +696,24 @@ function createHongKongStreet() {
     scene.add(curb);
   }
 
-  createHeroBattleBlock();
-  createBuildings(-1);
-  createBuildings(1);
+  if (!visualMode.photoDominant) {
+    createHeroBattleBlock();
+    createBuildings(-1);
+    createBuildings(1);
+  } else {
+    createHeroRoadDetails();
+  }
   createWetStreetDetails();
   createBakedLightField();
-  createOpeningNeon();
-  createOverheadSigns();
-  createOverheadCables();
+  if (!visualMode.photoDominant) {
+    createOpeningNeon();
+    createOverheadSigns();
+    createOverheadCables();
+  }
   createStreetProps();
-  createGeneratedBackdrop();
-  createHarbourBackdrop();
+  if (!visualMode.photoDominant) {
+    createHarbourBackdrop();
+  }
 }
 
 function createGeneratedSceneLighting() {
@@ -1106,21 +1127,39 @@ function createHeroGatewaySign() {
 }
 
 function createGeneratedBackdrop() {
-  const material = new THREE.MeshBasicMaterial({
-    map: generatedAssets.street,
+  const cinematicMaterial = new THREE.MeshBasicMaterial({
+    map: generatedAssets.cinematicStreet,
     transparent: true,
-    opacity: 0.34,
+    opacity: 0.96,
     depthWrite: false,
     toneMapped: false,
+    side: THREE.DoubleSide,
   });
-  const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(86, 48.4), material);
-  backdrop.position.set(0, 13.5, -118);
+  cinematicMaterial.fog = false;
+  const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(330, 185.6), cinematicMaterial);
+  backdrop.position.set(0, 26, -116);
+  backdrop.renderOrder = -20;
+  cinematicBackdrop = backdrop;
   scene.add(backdrop);
 
+  const legacyMaterial = new THREE.MeshBasicMaterial({
+    map: generatedAssets.street,
+    transparent: true,
+    opacity: 0.04,
+    depthWrite: false,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+  });
+  legacyMaterial.fog = false;
+  const legacyBackdrop = new THREE.Mesh(new THREE.PlaneGeometry(330, 185.6), legacyMaterial);
+  legacyBackdrop.position.set(0, 26, -115.4);
+  legacyBackdrop.renderOrder = -19;
+  scene.add(legacyBackdrop);
+
   const glow = new THREE.Mesh(
-    new THREE.PlaneGeometry(88, 50),
+    new THREE.PlaneGeometry(334, 188),
     new THREE.MeshBasicMaterial({
-      color: 0x12333c,
+      color: 0x17252f,
       transparent: true,
       opacity: 0.1,
       blending: THREE.AdditiveBlending,
@@ -1128,7 +1167,9 @@ function createGeneratedBackdrop() {
       toneMapped: false,
     }),
   );
-  glow.position.set(0, 13.5, -117.8);
+  glow.material.fog = false;
+  glow.position.set(0, 26, -115.0);
+  glow.renderOrder = -18;
   scene.add(glow);
 }
 
@@ -2101,13 +2142,13 @@ async function attachRiggedActor(actor, options) {
 
       const materialsToTune = Array.isArray(node.material) ? node.material : [node.material];
       for (const material of materialsToTune) {
-        const baseMap = options.role === "player" ? characterPanels.wetCoat : characterPanels.gunmetal;
-        if (material.color) material.color.setHex(options.role === "player" ? 0x536468 : 0x3d242d);
+        const baseMap = options.role === "player" ? characterPanels.gunmetal : characterPanels.gunmetal;
+        if (material.color) material.color.setHex(options.role === "player" ? 0x8e999a : 0x68404c);
         if ("map" in material) material.map = characterTexture(baseMap);
-        if ("roughness" in material) material.roughness = options.role === "player" ? 0.46 : 0.48;
-        if ("metalness" in material) material.metalness = options.role === "player" ? 0.26 : 0.24;
-        if ("envMapIntensity" in material) material.envMapIntensity = 0.7;
-        if (material.emissive) material.emissive.copy(accent).multiplyScalar(options.role === "player" ? 0.05 : 0.08);
+        if ("roughness" in material) material.roughness = options.role === "player" ? 0.26 : 0.42;
+        if ("metalness" in material) material.metalness = options.role === "player" ? 0.52 : 0.3;
+        if ("envMapIntensity" in material) material.envMapIntensity = 1.05;
+        if (material.emissive) material.emissive.copy(accent).multiplyScalar(options.role === "player" ? 0.08 : 0.1);
         rigMaterials.push(material);
       }
     });
@@ -2140,7 +2181,7 @@ async function attachRiggedActor(actor, options) {
     actor.rigWeapon = kit.userData.weapon;
     actor.rigMaterials = rigMaterials;
     actor.gltfBasePosition = root.position.clone();
-    actor.model.visible = options.role === "player";
+    actor.model.visible = false;
     actor.billboard.group.visible = false;
     setActorAction(actor, "Idle", 0);
     animatedActors.push(actor);
@@ -2295,8 +2336,8 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex) {
   kit.userData.weapon = weapon;
   kit.userData.glowMaterials = [neon, neonSecondary];
   kit.userData.swayParts = swayParts;
-  kit.scale.set(role === "player" ? 0.76 : 0.84, role === "player" ? 0.92 : 0.96, role === "player" ? 0.78 : 0.84);
-  kit.position.y = 0.06;
+  kit.scale.set(role === "player" ? 0.58 : 0.42, role === "player" ? 0.82 : 0.62, role === "player" ? 0.62 : 0.44);
+  kit.position.y = role === "player" ? 0.16 : 0.06;
   return kit;
 }
 
@@ -2571,6 +2612,37 @@ function createPlayer() {
   sword.position.set(0.58, 1.03, 0.2);
   sword.rotation.set(-0.48, -0.45, -0.08);
   model.add(sword);
+
+  const keyLight = new THREE.PointLight(0xfff3df, 1.35, 4.4, 2.1);
+  keyLight.position.set(-0.7, 1.6, 1.25);
+  group.add(keyLight);
+  const rimLight = new THREE.PointLight(0xff4a7d, 0.85, 3.5, 2.0);
+  rimLight.position.set(0.9, 1.25, -0.55);
+  group.add(rimLight);
+
+  const heroGlowTexture = canvasTexture(256, 256, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    const grad = ctx.createRadialGradient(w / 2, h / 2, 5, w / 2, h / 2, w * 0.5);
+    grad.addColorStop(0, "rgba(130,255,246,0.42)");
+    grad.addColorStop(0.38, "rgba(255,72,128,0.18)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  });
+  const heroGlow = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.1, 1.25),
+    new THREE.MeshBasicMaterial({
+      map: heroGlowTexture,
+      transparent: true,
+      opacity: 0.28,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    }),
+  );
+  heroGlow.rotation.x = -Math.PI / 2;
+  heroGlow.position.set(0, 0.052, 0.05);
+  group.add(heroGlow);
 
   const billboard = { group: new THREE.Group(), main: null };
   group.add(billboard.group);
@@ -3437,6 +3509,15 @@ function updateGeneratedSceneMotion(dt) {
     generatedSceneOffset.x = damp(generatedSceneOffset.x, targetX, 2.4, dt);
     generatedSceneOffset.y = damp(generatedSceneOffset.y, targetY, 2.4, dt);
     generatedAssets.street.offset.copy(generatedSceneOffset);
+    const cinematicTargetX = clamp(camera.position.x * -0.00055, -0.018, 0.018);
+    const cinematicTargetY = clamp((camera.position.z - 40) * -0.00008, -0.015, 0.015);
+    cinematicSceneOffset.x = damp(cinematicSceneOffset.x, cinematicTargetX, 2.0, dt);
+    cinematicSceneOffset.y = damp(cinematicSceneOffset.y, cinematicTargetY, 2.0, dt);
+    generatedAssets.cinematicStreet.offset.copy(cinematicSceneOffset);
+    if (cinematicBackdrop) {
+      cinematicBackdrop.position.x = damp(cinematicBackdrop.position.x, camera.position.x * 0.16, 3.0, dt);
+      cinematicBackdrop.position.y = damp(cinematicBackdrop.position.y, 26 + cameraRig.pitch * 3.5, 3.0, dt);
+    }
     return;
   }
   const targetX = clamp(0.07 + player.group.position.x * -0.010, 0.01, 0.13);
@@ -3444,6 +3525,7 @@ function updateGeneratedSceneMotion(dt) {
   generatedSceneOffset.x = damp(generatedSceneOffset.x, targetX, 4, dt);
   generatedSceneOffset.y = damp(generatedSceneOffset.y, targetY, 4, dt);
   generatedAssets.street.offset.copy(generatedSceneOffset);
+  generatedAssets.cinematicStreet.offset.copy(generatedSceneOffset);
 }
 
 function updateStreetLife(dt) {
