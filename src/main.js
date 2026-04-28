@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
+import characterCinematicAtlasUrl from "./assets/character-cinematic-atlas.png";
 import characterMaterialAtlasUrl from "./assets/character-material-atlas.png";
 import hkCinematicStreetUrl from "./assets/hk-cinematic-street.png";
 import hkCloseStreetAtlasUrl from "./assets/hk-close-street-atlas.png";
@@ -100,6 +102,16 @@ const soldierModelPromise = gltfLoader.loadAsync(soldierModelUrl);
 const generatedAssets = createGeneratedAssetTextures();
 scene.background = visualMode.generatedScene ? generatedAssets.street : new THREE.Color(0x061018);
 
+function atlasGridCell(col, row, pad = 0.0075) {
+  const size = 0.25;
+  return [
+    col * size + pad,
+    row * size + pad,
+    size - pad * 2,
+    size - pad * 2,
+  ];
+}
+
 const atlasPanels = {
   wetRoad: [0.0, 0.0, 0.435, 0.36],
   sidewalk: [0.0, 0.36, 0.435, 0.12],
@@ -146,6 +158,25 @@ const characterPanels = {
   cyanLong: [0.86, 0.25, 0.14, 0.72],
   magentaVisor: [0.7, 0.0, 0.3, 0.2],
   boots: [0.16, 0.83, 0.18, 0.16],
+};
+
+const characterCinematicPanels = {
+  wetCoat: atlasGridCell(0, 0),
+  carbonArmor: atlasGridCell(1, 0),
+  gunmetal: atlasGridCell(2, 0),
+  helmet: atlasGridCell(3, 0),
+  cyanVisor: atlasGridCell(0, 1),
+  magentaVisor: atlasGridCell(1, 1),
+  tacticalFabric: atlasGridCell(2, 1),
+  rubberGloves: atlasGridCell(3, 1),
+  harness: atlasGridCell(0, 2),
+  boots: atlasGridCell(1, 2),
+  meshSuit: atlasGridCell(2, 2),
+  enemyArmor: atlasGridCell(3, 2),
+  cyanCircuit: atlasGridCell(0, 3),
+  magentaCircuit: atlasGridCell(1, 3),
+  bladeMetal: atlasGridCell(2, 3),
+  decals: atlasGridCell(3, 3),
 };
 
 let gameStarted = false;
@@ -305,6 +336,7 @@ function createGeneratedAssetTextures() {
   };
   return {
     character: load(characterMaterialAtlasUrl),
+    cinematicCharacter: load(characterCinematicAtlasUrl),
     atlas: load(hkMaterialAtlasUrl),
     closeStreet: load(hkCloseStreetAtlasUrl),
     cinematicStreet: (() => {
@@ -341,6 +373,10 @@ function atlasTexture(panel, sourceTexture = generatedAssets.atlas) {
 
 function characterTexture(panel) {
   return atlasTexture(panel, generatedAssets.character);
+}
+
+function cinematicCharacterTexture(panel) {
+  return atlasTexture(panel, generatedAssets.cinematicCharacter);
 }
 
 function closeStreetTexture(panel) {
@@ -400,7 +436,7 @@ function createMaterials() {
       normalMap: wetAsphaltMaps.normal,
       roughnessMap: wetAsphaltMaps.roughness,
       transparent: true,
-      opacity: visualMode.generatedScene ? 0.24 : 0.82,
+      opacity: visualMode.photoDominant ? 0.44 : (visualMode.generatedScene ? 0.24 : 0.82),
       roughness: 0.18,
       metalness: 0.34,
       envMapIntensity: 1.0,
@@ -419,46 +455,50 @@ function createMaterials() {
       metalness: 0.18,
     }),
     playerCoat: new THREE.MeshStandardMaterial({
-      color: 0x22282d,
-      map: characterTexture(characterPanels.wetCoat),
-      roughness: 0.28,
-      metalness: 0.24,
+      color: 0xe6f0ed,
+      map: cinematicCharacterTexture(characterCinematicPanels.wetCoat),
+      roughness: 0.2,
+      metalness: 0.34,
+      envMapIntensity: 1.22,
     }),
     playerArmor: new THREE.MeshStandardMaterial({
-      color: 0x2b3136,
-      map: characterTexture(characterPanels.armorPlate),
-      roughness: 0.24,
-      metalness: 0.62,
-      envMapIntensity: 1.2,
+      color: 0xdce9e7,
+      map: cinematicCharacterTexture(characterCinematicPanels.carbonArmor),
+      roughness: 0.2,
+      metalness: 0.72,
+      envMapIntensity: 1.45,
     }),
     playerAccent: new THREE.MeshStandardMaterial({
-      color: 0x27d5d0,
-      map: characterTexture(characterPanels.cyanCircuit),
+      color: 0xb8fffb,
+      map: cinematicCharacterTexture(characterCinematicPanels.cyanCircuit),
       emissive: 0x126968,
-      emissiveIntensity: 1.35,
-      roughness: 0.22,
-      metalness: 0.42,
+      emissiveIntensity: 1.05,
+      roughness: 0.18,
+      metalness: 0.5,
     }),
     blade: new THREE.MeshStandardMaterial({
-      color: 0xdde8ec,
-      emissive: 0x9adfff,
-      emissiveIntensity: 0.8,
-      roughness: 0.18,
-      metalness: 0.9,
+      color: 0xf2fbff,
+      map: cinematicCharacterTexture(characterCinematicPanels.bladeMetal),
+      emissive: 0x446a7d,
+      emissiveIntensity: 0.34,
+      roughness: 0.13,
+      metalness: 0.94,
+      envMapIntensity: 1.4,
     }),
     enemyBody: new THREE.MeshStandardMaterial({
-      color: 0x2a2228,
-      map: characterTexture(characterPanels.tacticalFabric),
-      roughness: 0.34,
-      metalness: 0.24,
+      color: 0xe1d1d3,
+      map: cinematicCharacterTexture(characterCinematicPanels.tacticalFabric),
+      roughness: 0.42,
+      metalness: 0.2,
+      envMapIntensity: 1.0,
     }),
     enemyAccent: new THREE.MeshStandardMaterial({
-      color: 0xff335a,
-      map: characterTexture(characterPanels.magentaVisor),
+      color: 0xff95a9,
+      map: cinematicCharacterTexture(characterCinematicPanels.magentaCircuit),
       emissive: 0xb60028,
-      emissiveIntensity: 1.2,
-      roughness: 0.2,
-      metalness: 0.3,
+      emissiveIntensity: 0.95,
+      roughness: 0.18,
+      metalness: 0.44,
     }),
     glass: new THREE.MeshStandardMaterial({
       color: 0x16222f,
@@ -468,9 +508,10 @@ function createMaterials() {
       opacity: 0.76,
     }),
     taxi: new THREE.MeshStandardMaterial({
-      color: 0x8f7425,
-      roughness: 0.36,
-      metalness: 0.22,
+      color: 0x3d2930,
+      roughness: 0.28,
+      metalness: 0.34,
+      envMapIntensity: 1.05,
     }),
     redTaxi: new THREE.MeshStandardMaterial({
       color: 0x55171d,
@@ -478,9 +519,11 @@ function createMaterials() {
       metalness: 0.18,
     }),
     blackRubber: new THREE.MeshStandardMaterial({
-      color: 0x060708,
-      roughness: 0.7,
-      metalness: 0.05,
+      color: 0x949494,
+      map: cinematicCharacterTexture(characterCinematicPanels.rubberGloves),
+      roughness: 0.56,
+      metalness: 0.12,
+      envMapIntensity: 0.8,
     }),
     facadeConcrete: atlasMaterial(atlasPanels.concreteWall, {
       color: 0xb8c4c6,
@@ -1697,9 +1740,9 @@ function createNeonFrame(width, height, depth) {
 
 function createStreetProps() {
   const parkedTaxiA = createTaxi(-4.25, 29, -0.12);
-  parkedTaxiA.scale.setScalar(0.54);
+  parkedTaxiA.scale.setScalar(0.48);
   const parkedTaxiB = createTaxi(4.1, -45, Math.PI + 0.05);
-  parkedTaxiB.scale.setScalar(0.54);
+  parkedTaxiB.scale.setScalar(0.48);
   createMovingTraffic();
   createMtrEntrance(6.75, -18, -1);
   createBusStop(-6.75, 7, 1);
@@ -1750,7 +1793,7 @@ function createMovingTraffic() {
   ];
   for (const lane of lanes) {
     const car = createTaxi(lane.x, lane.z, lane.rotation);
-    car.scale.setScalar(0.5);
+    car.scale.setScalar(0.42);
     addLensGlow(car, 0xffe2a9, [-0.42, 0.72, -1.82], 0.1, 0.72);
     addLensGlow(car, 0xffe2a9, [0.42, 0.72, -1.82], 0.1, 0.72);
     addLensGlow(car, 0xff2f6d, [-0.42, 0.72, 1.68], 0.08, 0.62);
@@ -1764,29 +1807,29 @@ function createTaxi(x, z, rotation) {
   car.position.set(x, 0.04, z);
   car.rotation.y = rotation;
 
-  const base = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.55, 3.35), materials.redTaxi);
+  const base = new THREE.Mesh(roundedBox(1.75, 0.55, 3.35, 0.18, 4), materials.redTaxi);
   base.position.y = 0.55;
   base.castShadow = true;
   base.receiveShadow = true;
   car.add(base);
 
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.68, 1.55), materials.taxi);
+  const cabin = new THREE.Mesh(roundedBox(1.48, 0.68, 1.55, 0.16, 4), materials.taxi);
   cabin.position.set(0, 1.03, -0.16);
   cabin.castShadow = true;
   cabin.receiveShadow = true;
   car.add(cabin);
 
-  const windscreen = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.5, 0.08), materials.glass);
+  const windscreen = new THREE.Mesh(roundedBox(1.34, 0.5, 0.08, 0.035, 3), materials.glass);
   windscreen.position.set(0, 1.06, -0.98);
   car.add(windscreen);
 
   const taxiSignTexture = createSignTexture("的士", "TAXI", "#ffe36d", "#141411", 256, 128);
   const taxiSign = new THREE.Mesh(
-    new THREE.BoxGeometry(0.75, 0.22, 0.42),
+    roundedBox(0.68, 0.12, 0.32, 0.035, 3),
     trackNeonMaterial(new THREE.MeshBasicMaterial({ map: taxiSignTexture, toneMapped: false }), 0.92),
   );
-  taxiSign.position.set(0, 1.48, -0.16);
-  car.add(taxiSign);
+  taxiSign.position.set(0, 1.42, -0.16);
+  if (!visualMode.photoDominant) car.add(taxiSign);
 
   for (const sx of [-0.78, 0.78]) {
     for (const sz of [-1.12, 1.12]) {
@@ -1800,7 +1843,7 @@ function createTaxi(x, z, rotation) {
 
   const headlightMaterial = new THREE.MeshBasicMaterial({ color: 0xfff4c2, toneMapped: false });
   for (const sx of [-0.48, 0.48]) {
-    const light = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.05), headlightMaterial);
+    const light = new THREE.Mesh(roundedBox(0.28, 0.12, 0.05, 0.025), headlightMaterial);
     light.position.set(sx, 0.58, -1.7);
     car.add(light);
   }
@@ -2121,6 +2164,10 @@ function makePart(parent, geometry, material, position, rotation = null) {
   return mesh;
 }
 
+function roundedBox(width, height, depth, radius = 0.035, segments = 3) {
+  return new RoundedBoxGeometry(width, height, depth, segments, Math.min(radius, width * 0.45, height * 0.45, depth * 0.45));
+}
+
 async function attachRiggedActor(actor, options) {
   try {
     const gltf = await soldierModelPromise;
@@ -2142,13 +2189,15 @@ async function attachRiggedActor(actor, options) {
 
       const materialsToTune = Array.isArray(node.material) ? node.material : [node.material];
       for (const material of materialsToTune) {
-        const baseMap = options.role === "player" ? characterPanels.gunmetal : characterPanels.gunmetal;
-        if (material.color) material.color.setHex(options.role === "player" ? 0x8e999a : 0x68404c);
-        if ("map" in material) material.map = characterTexture(baseMap);
-        if ("roughness" in material) material.roughness = options.role === "player" ? 0.26 : 0.42;
-        if ("metalness" in material) material.metalness = options.role === "player" ? 0.52 : 0.3;
-        if ("envMapIntensity" in material) material.envMapIntensity = 1.05;
-        if (material.emissive) material.emissive.copy(accent).multiplyScalar(options.role === "player" ? 0.08 : 0.1);
+        const baseMap = options.role === "player"
+          ? characterCinematicPanels.wetCoat
+          : characterCinematicPanels.enemyArmor;
+        if (material.color) material.color.setHex(options.role === "player" ? 0xe8f4f1 : 0xf1c1c4);
+        if ("map" in material) material.map = cinematicCharacterTexture(baseMap);
+        if ("roughness" in material) material.roughness = options.role === "player" ? 0.22 : 0.32;
+        if ("metalness" in material) material.metalness = options.role === "player" ? 0.44 : 0.48;
+        if ("envMapIntensity" in material) material.envMapIntensity = options.role === "player" ? 1.34 : 1.12;
+        if (material.emissive) material.emissive.copy(accent).multiplyScalar(options.role === "player" ? 0.045 : 0.075);
         rigMaterials.push(material);
       }
     });
@@ -2195,7 +2244,7 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex) {
   const neon = new THREE.MeshBasicMaterial({
     color: accentHex,
     transparent: true,
-    opacity: 0.95,
+    opacity: 0.74,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     toneMapped: false,
@@ -2203,59 +2252,90 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex) {
   const neonSecondary = new THREE.MeshBasicMaterial({
     color: secondaryAccentHex,
     transparent: true,
-    opacity: 0.68,
+    opacity: 0.42,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     toneMapped: false,
   });
   const metal = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0x6b777a : 0x6a545d,
-    map: characterTexture(characterPanels.gunmetal),
-    roughness: 0.22,
-    metalness: 0.78,
+    color: role === "player" ? 0xdce8e6 : 0xe5bdc1,
+    map: cinematicCharacterTexture(characterCinematicPanels.gunmetal),
+    roughness: 0.18,
+    metalness: 0.82,
+    envMapIntensity: 1.32,
     emissive: role === "player" ? 0x06191b : 0x1b070d,
-    emissiveIntensity: 0.22,
+    emissiveIntensity: 0.12,
   });
   const armor = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0x4b5a5d : 0x694351,
-    map: characterTexture(role === "player" ? characterPanels.armorPlate : characterPanels.carbonFiber),
-    roughness: 0.28,
-    metalness: 0.58,
+    color: role === "player" ? 0xe3efec : 0xf2b4b8,
+    map: cinematicCharacterTexture(role === "player" ? characterCinematicPanels.carbonArmor : characterCinematicPanels.enemyArmor),
+    roughness: role === "player" ? 0.19 : 0.24,
+    metalness: role === "player" ? 0.72 : 0.6,
+    envMapIntensity: role === "player" ? 1.4 : 1.18,
     emissive: role === "player" ? 0x071c1f : 0x22070f,
-    emissiveIntensity: 0.26,
+    emissiveIntensity: 0.16,
   });
   const coat = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0x273235 : 0x4f2f3b,
-    map: characterTexture(role === "player" ? characterPanels.wetCoat : characterPanels.tacticalFabric),
-    roughness: 0.34,
-    metalness: 0.22,
+    color: role === "player" ? 0xe3ece8 : 0xd1c3c7,
+    map: cinematicCharacterTexture(role === "player" ? characterCinematicPanels.wetCoat : characterCinematicPanels.tacticalFabric),
+    roughness: role === "player" ? 0.22 : 0.46,
+    metalness: role === "player" ? 0.3 : 0.16,
+    envMapIntensity: 1.05,
     emissive: role === "player" ? 0x061617 : 0x18070c,
-    emissiveIntensity: 0.28,
+    emissiveIntensity: 0.12,
     transparent: true,
-    opacity: 0.78,
+    opacity: 0.88,
     depthWrite: false,
   });
   const deepCoat = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0x1c2528 : 0x21121a,
-    map: characterTexture(characterPanels.wetCoat),
-    roughness: 0.28,
-    metalness: 0.24,
+    color: role === "player" ? 0xd7e4e0 : 0xc9bdc0,
+    map: cinematicCharacterTexture(role === "player" ? characterCinematicPanels.wetCoat : characterCinematicPanels.meshSuit),
+    roughness: role === "player" ? 0.24 : 0.52,
+    metalness: role === "player" ? 0.28 : 0.12,
+    envMapIntensity: 0.94,
     emissive: role === "player" ? 0x031517 : 0x1d060d,
-    emissiveIntensity: 0.2,
+    emissiveIntensity: 0.1,
   });
   const visorMaterial = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0x86fff7 : 0xff6e94,
-    map: characterTexture(characterPanels.magentaVisor),
-    roughness: 0.16,
-    metalness: 0.42,
+    color: role === "player" ? 0xd2fffb : 0xffced8,
+    map: cinematicCharacterTexture(role === "player" ? characterCinematicPanels.cyanVisor : characterCinematicPanels.magentaVisor),
+    roughness: 0.08,
+    metalness: 0.58,
+    envMapIntensity: 1.5,
     emissive: role === "player" ? 0x18c9c1 : 0xff2f6d,
-    emissiveIntensity: role === "player" ? 1.5 : 1.25,
+    emissiveIntensity: role === "player" ? 0.95 : 0.9,
   });
   const rubber = new THREE.MeshStandardMaterial({
-    color: 0x080b0d,
-    map: characterTexture(characterPanels.blackRubber),
-    roughness: 0.52,
-    metalness: 0.18,
+    color: 0xb6b6b6,
+    map: cinematicCharacterTexture(characterCinematicPanels.rubberGloves),
+    roughness: 0.5,
+    metalness: 0.12,
+    envMapIntensity: 0.8,
+  });
+  const harness = new THREE.MeshStandardMaterial({
+    color: 0xe0d5ce,
+    map: cinematicCharacterTexture(characterCinematicPanels.harness),
+    roughness: 0.4,
+    metalness: 0.24,
+    envMapIntensity: 1.0,
+  });
+  const decals = new THREE.MeshStandardMaterial({
+    color: role === "player" ? 0xbad6d2 : 0xd6a2a8,
+    map: cinematicCharacterTexture(characterCinematicPanels.decals),
+    roughness: 0.36,
+    metalness: 0.22,
+    envMapIntensity: 1.1,
+    emissive: role === "player" ? 0x031211 : 0x120307,
+    emissiveIntensity: 0.045,
+  });
+  const bladeKit = new THREE.MeshStandardMaterial({
+    color: 0xf3fbff,
+    map: cinematicCharacterTexture(characterCinematicPanels.bladeMetal),
+    roughness: 0.12,
+    metalness: 0.94,
+    envMapIntensity: 1.5,
+    emissive: role === "player" ? 0x244d58 : 0x551024,
+    emissiveIntensity: 0.24,
   });
   const swayParts = [];
 
@@ -2276,55 +2356,64 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex) {
     add(geometry, material, [x, y, z], rotation ?? null, options);
   };
 
-  add(new THREE.SphereGeometry(0.24, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.78), armor, [0, 1.93, 0.02], [0.06, 0, 0]);
-  add(new THREE.BoxGeometry(0.42, 0.16, 0.16), rubber, [0, 1.83, 0.05]);
-  add(new THREE.BoxGeometry(0.36, 0.065, 0.05), visorMaterial, [0, 1.91, 0.235]);
-  add(new THREE.BoxGeometry(0.22, 0.13, 0.08), metal, [0, 1.78, 0.24]);
+  add(new THREE.SphereGeometry(0.24, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.78), armor, [0, 1.93, 0.02], [0.06, 0, 0]);
+  add(roundedBox(0.44, 0.17, 0.18, 0.055), rubber, [0, 1.83, 0.05]);
+  add(roundedBox(0.38, 0.07, 0.055, 0.028), visorMaterial, [0, 1.91, 0.238]);
+  add(roundedBox(0.24, 0.13, 0.08, 0.03), metal, [0, 1.78, 0.24]);
+  addMirrored(new THREE.CylinderGeometry(0.052, 0.052, 0.05, 16), metal, 0.24, 1.9, 0.06, [0, 0, Math.PI / 2], false);
 
-  add(new THREE.BoxGeometry(0.58, 0.62, 0.095), armor, [0, 1.3, 0.42], [-0.08, 0, 0]);
-  add(new THREE.BoxGeometry(0.18, 0.5, 0.07), metal, [-0.23, 1.27, 0.46], [-0.05, 0, 0.08]);
-  add(new THREE.BoxGeometry(0.18, 0.5, 0.07), metal, [0.23, 1.27, 0.46], [-0.05, 0, -0.08]);
-  add(new THREE.BoxGeometry(0.4, 0.5, 0.06), deepCoat, [0, 1.22, -0.34], [0.08, 0, 0]);
-  add(new THREE.BoxGeometry(0.075, 0.62, 0.055), metal, [0, 1.26, -0.43]);
+  add(roundedBox(0.6, 0.64, 0.12, 0.08), armor, [0, 1.3, 0.42], [-0.08, 0, 0]);
+  add(roundedBox(0.2, 0.52, 0.08, 0.04), metal, [-0.23, 1.27, 0.47], [-0.05, 0, 0.08]);
+  add(roundedBox(0.2, 0.52, 0.08, 0.04), metal, [0.23, 1.27, 0.47], [-0.05, 0, -0.08]);
+  add(roundedBox(0.44, 0.54, 0.065, 0.045), deepCoat, [0, 1.22, -0.34], [0.08, 0, 0]);
+  add(roundedBox(0.08, 0.64, 0.06, 0.024), harness, [0, 1.26, -0.43]);
+  add(roundedBox(0.68, 0.075, 0.08, 0.025), harness, [0, 1.04, 0.43], [-0.04, 0, 0]);
+  add(roundedBox(0.5, 0.065, 0.06, 0.02), harness, [0, 1.55, 0.43], [-0.08, 0, 0]);
+  add(roundedBox(0.18, 0.075, 0.035, 0.014), decals, [-0.16, 1.61, 0.49], [-0.08, 0, -0.04]);
+  add(roundedBox(0.16, 0.07, 0.035, 0.014), decals, [0.17, 1.02, 0.49], [-0.04, 0, 0.05]);
 
-  addMirrored(new THREE.BoxGeometry(0.38, 0.18, 0.58), armor, 0.5, 1.52, 0.01, [0, 0, 0.18]);
-  addMirrored(new THREE.BoxGeometry(0.16, 0.54, 0.13), metal, 0.62, 1.11, 0.13, [0.16, 0, 0.18]);
-  addMirrored(new THREE.BoxGeometry(0.18, 0.26, 0.16), rubber, 0.66, 0.82, 0.18, [0.08, 0, 0.08]);
-  addMirrored(new THREE.BoxGeometry(0.2, 0.5, 0.12), armor, 0.2, 0.48, 0.12, [0.04, 0, 0.04]);
-  addMirrored(new THREE.BoxGeometry(0.22, 0.18, 0.42), rubber, 0.19, 0.14, 0.18, [0, 0, 0.02]);
+  addMirrored(roundedBox(0.4, 0.18, 0.6, 0.07), armor, 0.5, 1.52, 0.01, [0, 0, 0.18]);
+  addMirrored(new THREE.CapsuleGeometry(0.075, 0.48, 5, 12), metal, 0.62, 1.11, 0.13, [0.16, 0, 0.18]);
+  addMirrored(roundedBox(0.18, 0.26, 0.18, 0.055), rubber, 0.66, 0.82, 0.18, [0.08, 0, 0.08]);
+  addMirrored(new THREE.CapsuleGeometry(0.085, 0.45, 5, 12), armor, 0.2, 0.48, 0.12, [0.04, 0, 0.04]);
+  addMirrored(roundedBox(0.24, 0.17, 0.44, 0.06), rubber, 0.19, 0.14, 0.18, [0, 0, 0.02]);
 
-  add(new THREE.BoxGeometry(0.2, 0.82, 0.055), deepCoat, [-0.24, 0.66, 0.32], [-0.1, 0.06, 0.1], { sway: true });
-  add(new THREE.BoxGeometry(0.2, 0.82, 0.055), deepCoat, [0.24, 0.66, 0.32], [-0.1, -0.06, -0.1], { sway: true });
-  add(new THREE.BoxGeometry(0.28, 0.92, 0.065), coat, [0, 0.68, -0.36], [0.12, 0, 0], { sway: true });
-  add(new THREE.BoxGeometry(0.09, 0.68, 0.035), neon, [0, 1.34, 0.49]);
-  add(new THREE.BoxGeometry(0.46, 0.055, 0.035), role === "player" ? neon : neonSecondary, [0, 1.76, 0.31]);
-  add(new THREE.BoxGeometry(0.028, 0.76, 0.03), neonSecondary, [-0.31, 1.22, 0.43], [0, 0, -0.1]);
-  add(new THREE.BoxGeometry(0.028, 0.76, 0.03), neon, [0.31, 1.22, 0.43], [0, 0, 0.1]);
+  add(roundedBox(0.2, 0.86, 0.055, 0.03), deepCoat, [-0.24, 0.66, 0.32], [-0.1, 0.06, 0.1], { sway: true });
+  add(roundedBox(0.2, 0.86, 0.055, 0.03), deepCoat, [0.24, 0.66, 0.32], [-0.1, -0.06, -0.1], { sway: true });
+  add(roundedBox(0.3, 0.94, 0.07, 0.035), coat, [0, 0.68, -0.36], [0.12, 0, 0], { sway: true });
+  add(roundedBox(0.18, 0.08, 0.035, 0.016), decals, [0.0, 0.94, -0.42], [0.12, 0, 0]);
+  add(roundedBox(0.085, 0.68, 0.035, 0.018), neon, [0, 1.34, 0.49]);
+  add(roundedBox(0.46, 0.055, 0.035, 0.018), role === "player" ? neon : neonSecondary, [0, 1.76, 0.31]);
+  add(roundedBox(0.03, 0.76, 0.03, 0.013), neonSecondary, [-0.31, 1.22, 0.43], [0, 0, -0.1]);
+  add(roundedBox(0.03, 0.76, 0.03, 0.013), neon, [0.31, 1.22, 0.43], [0, 0, 0.1]);
 
-  add(new THREE.BoxGeometry(0.36, 0.46, 0.045), armor, [0, 1.32, 0.5], [-0.08, 0, 0]);
-  add(new THREE.BoxGeometry(0.19, 0.36, 0.055), coat, [-0.18, 0.66, 0.39], [-0.08, 0.04, 0.08], { sway: true });
-  add(new THREE.BoxGeometry(0.19, 0.36, 0.055), coat, [0.18, 0.66, 0.39], [-0.08, -0.04, -0.08], { sway: true });
-  add(new THREE.BoxGeometry(0.09, 0.68, 0.035), neon, [0, 1.34, 0.43]);
-  add(new THREE.BoxGeometry(0.42, 0.055, 0.035), role === "player" ? neon : neonSecondary, [0, 1.78, 0.27]);
-  add(new THREE.BoxGeometry(0.028, 0.76, 0.03), neonSecondary, [-0.26, 1.22, 0.37], [0, 0, -0.1]);
-  add(new THREE.BoxGeometry(0.028, 0.76, 0.03), neon, [0.26, 1.22, 0.37], [0, 0, 0.1]);
+  add(roundedBox(0.36, 0.46, 0.05, 0.04), armor, [0, 1.32, 0.51], [-0.08, 0, 0]);
+  add(roundedBox(0.19, 0.38, 0.055, 0.028), coat, [-0.18, 0.66, 0.39], [-0.08, 0.04, 0.08], { sway: true });
+  add(roundedBox(0.19, 0.38, 0.055, 0.028), coat, [0.18, 0.66, 0.39], [-0.08, -0.04, -0.08], { sway: true });
+  add(roundedBox(0.085, 0.68, 0.035, 0.018), neon, [0, 1.34, 0.43]);
+  add(roundedBox(0.42, 0.055, 0.035, 0.018), role === "player" ? neon : neonSecondary, [0, 1.78, 0.27]);
+  add(roundedBox(0.03, 0.76, 0.03, 0.013), neonSecondary, [-0.26, 1.22, 0.37], [0, 0, -0.1]);
+  add(roundedBox(0.03, 0.76, 0.03, 0.013), neon, [0.26, 1.22, 0.37], [0, 0, 0.1]);
 
   const weapon = new THREE.Group();
   if (role === "player") {
     const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 10), metal);
     handle.rotation.x = Math.PI / 2;
     weapon.add(handle);
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.06, 1.42), neon);
+    const blade = new THREE.Mesh(roundedBox(0.05, 0.065, 1.42, 0.018), bladeKit);
     blade.position.z = 0.75;
     blade.castShadow = true;
     weapon.add(blade);
+    const edge = new THREE.Mesh(roundedBox(0.014, 0.078, 1.34, 0.006), neon);
+    edge.position.set(0.034, 0, 0.78);
+    weapon.add(edge);
     weapon.position.set(0.55, 0.98, 0.18);
     weapon.rotation.set(-0.56, -0.64, -0.18);
   } else {
     const baton = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.92, 12), metal);
     baton.rotation.x = Math.PI / 2;
     weapon.add(baton);
-    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.08), neonSecondary);
+    const tip = new THREE.Mesh(roundedBox(0.12, 0.12, 0.08, 0.035), neonSecondary);
     tip.position.z = 0.48;
     weapon.add(tip);
     weapon.position.set(-0.5, 0.96, 0.2);
@@ -2336,8 +2425,8 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex) {
   kit.userData.weapon = weapon;
   kit.userData.glowMaterials = [neon, neonSecondary];
   kit.userData.swayParts = swayParts;
-  kit.scale.set(role === "player" ? 0.58 : 0.42, role === "player" ? 0.82 : 0.62, role === "player" ? 0.62 : 0.44);
-  kit.position.y = role === "player" ? 0.16 : 0.06;
+  kit.scale.set(role === "player" ? 0.62 : 0.5, role === "player" ? 0.86 : 0.72, role === "player" ? 0.66 : 0.52);
+  kit.position.y = role === "player" ? 0.15 : 0.04;
   return kit;
 }
 
@@ -2516,23 +2605,23 @@ function createPlayer() {
   group.add(model);
 
   const skin = new THREE.MeshStandardMaterial({
-    color: 0x151d20,
-    map: characterTexture(characterPanels.gunmetal),
-    roughness: 0.32,
-    metalness: 0.46,
+    color: 0xe5efec,
+    map: cinematicCharacterTexture(characterCinematicPanels.helmet),
+    roughness: 0.24,
+    metalness: 0.56,
     emissive: 0x02080a,
-    emissiveIntensity: 0.12,
+    emissiveIntensity: 0.08,
   });
   const hair = new THREE.MeshStandardMaterial({
-    color: 0x050708,
-    map: characterTexture(characterPanels.blackRubber),
+    color: 0xb6b6b6,
+    map: cinematicCharacterTexture(characterCinematicPanels.rubberGloves),
     roughness: 0.48,
-    metalness: 0.2,
+    metalness: 0.16,
   });
   const boot = new THREE.MeshStandardMaterial({
-    color: 0x0d0f10,
-    map: characterTexture(characterPanels.blackRubber),
-    roughness: 0.46,
+    color: 0xc7c7c7,
+    map: cinematicCharacterTexture(characterCinematicPanels.boots),
+    roughness: 0.5,
     metalness: 0.16,
   });
   const cloth = materials.playerCoat;
@@ -2547,16 +2636,16 @@ function createPlayer() {
   );
   torso.scale.z = 0.78;
 
-  const chestPlate = makePart(model, new THREE.BoxGeometry(0.52, 0.58, 0.08), shoulderMaterial, [0, 1.28, 0.34]);
+  const chestPlate = makePart(model, roundedBox(0.52, 0.58, 0.08, 0.06), shoulderMaterial, [0, 1.28, 0.34]);
   chestPlate.rotation.x = -0.08;
 
-  const chestLight = makePart(model, new THREE.BoxGeometry(0.12, 0.42, 0.055), trim, [0, 1.33, 0.39]);
-  const belt = makePart(model, new THREE.BoxGeometry(0.86, 0.12, 0.52), shoulderMaterial, [0, 0.78, 0.02]);
+  const chestLight = makePart(model, roundedBox(0.12, 0.42, 0.055, 0.025), trim, [0, 1.33, 0.39]);
+  const belt = makePart(model, roundedBox(0.86, 0.12, 0.52, 0.045), shoulderMaterial, [0, 0.78, 0.02]);
   belt.scale.x = 1.05;
 
-  const coatBack = makePart(model, new THREE.BoxGeometry(0.68, 0.74, 0.08), cloth, [0, 0.68, -0.31], [0.15, 0, 0]);
-  const leftCoat = makePart(model, new THREE.BoxGeometry(0.28, 0.7, 0.055), cloth, [-0.2, 0.58, 0.25], [-0.08, 0.06, 0.08]);
-  const rightCoat = makePart(model, new THREE.BoxGeometry(0.28, 0.7, 0.055), cloth, [0.2, 0.58, 0.25], [-0.08, -0.06, -0.08]);
+  const coatBack = makePart(model, roundedBox(0.68, 0.74, 0.08, 0.045), cloth, [0, 0.68, -0.31], [0.15, 0, 0]);
+  const leftCoat = makePart(model, roundedBox(0.28, 0.7, 0.055, 0.035), cloth, [-0.2, 0.58, 0.25], [-0.08, 0.06, 0.08]);
+  const rightCoat = makePart(model, roundedBox(0.28, 0.7, 0.055, 0.035), cloth, [0.2, 0.58, 0.25], [-0.08, -0.06, -0.08]);
   leftCoat.receiveShadow = false;
   rightCoat.receiveShadow = false;
 
@@ -2566,23 +2655,23 @@ function createPlayer() {
   head.scale.set(0.92, 1.04, 0.88);
   const hairCap = makePart(model, new THREE.SphereGeometry(0.285, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), hair, [0, 2.08, 0.03]);
   hairCap.scale.set(0.96, 0.64, 0.94);
-  const visor = makePart(model, new THREE.BoxGeometry(0.37, 0.065, 0.055), trim, [0, 2.0, 0.255]);
+  const visor = makePart(model, roundedBox(0.37, 0.065, 0.055, 0.025), trim, [0, 2.0, 0.255]);
 
-  const leftShoulder = makePart(model, new THREE.BoxGeometry(0.34, 0.17, 0.46), shoulderMaterial, [-0.46, 1.52, 0.02], [0, 0, -0.16]);
-  const rightShoulder = makePart(model, new THREE.BoxGeometry(0.34, 0.17, 0.46), shoulderMaterial, [0.46, 1.52, 0.02], [0, 0, 0.16]);
+  const leftShoulder = makePart(model, roundedBox(0.34, 0.17, 0.46, 0.06), shoulderMaterial, [-0.46, 1.52, 0.02], [0, 0, -0.16]);
+  const rightShoulder = makePart(model, roundedBox(0.34, 0.17, 0.46, 0.06), shoulderMaterial, [0.46, 1.52, 0.02], [0, 0, 0.16]);
 
   const leftArm = makePart(model, new THREE.CapsuleGeometry(0.085, 0.44, 5, 9), cloth, [-0.6, 1.16, 0.05], [0.24, 0.04, -0.18]);
   const rightArm = makePart(model, new THREE.CapsuleGeometry(0.085, 0.44, 5, 9), cloth, [0.6, 1.17, 0.08], [-0.16, -0.06, 0.22]);
-  const leftGlove = makePart(model, new THREE.BoxGeometry(0.16, 0.16, 0.18), boot, [-0.66, 0.88, 0.16]);
-  const rightGlove = makePart(model, new THREE.BoxGeometry(0.16, 0.16, 0.18), boot, [0.68, 0.9, 0.18]);
+  const leftGlove = makePart(model, roundedBox(0.16, 0.16, 0.18, 0.045), boot, [-0.66, 0.88, 0.16]);
+  const rightGlove = makePart(model, roundedBox(0.16, 0.16, 0.18, 0.045), boot, [0.68, 0.9, 0.18]);
 
   const leftLeg = makePart(model, new THREE.CapsuleGeometry(0.11, 0.56, 5, 9), cloth, [-0.18, 0.42, 0.02], [0.02, 0.02, 0.03]);
   const rightLeg = makePart(model, new THREE.CapsuleGeometry(0.11, 0.56, 5, 9), cloth, [0.18, 0.42, 0.02], [-0.02, -0.02, -0.03]);
-  const leftBoot = makePart(model, new THREE.BoxGeometry(0.22, 0.16, 0.38), boot, [-0.18, 0.13, 0.11]);
-  const rightBoot = makePart(model, new THREE.BoxGeometry(0.22, 0.16, 0.38), boot, [0.18, 0.13, 0.11]);
+  const leftBoot = makePart(model, roundedBox(0.22, 0.16, 0.38, 0.06), boot, [-0.18, 0.13, 0.11]);
+  const rightBoot = makePart(model, roundedBox(0.22, 0.16, 0.38, 0.06), boot, [0.18, 0.13, 0.11]);
 
-  const sideTubeL = makePart(model, new THREE.BoxGeometry(0.035, 0.58, 0.035), trim, [-0.37, 1.18, 0.38]);
-  const sideTubeR = makePart(model, new THREE.BoxGeometry(0.035, 0.58, 0.035), trim, [0.37, 1.18, 0.38]);
+  const sideTubeL = makePart(model, roundedBox(0.035, 0.58, 0.035, 0.014), trim, [-0.37, 1.18, 0.38]);
+  const sideTubeR = makePart(model, roundedBox(0.035, 0.58, 0.035, 0.014), trim, [0.37, 1.18, 0.38]);
   sideTubeL.castShadow = false;
   sideTubeR.castShadow = false;
 
@@ -2594,17 +2683,17 @@ function createPlayer() {
   handle.rotation.x = Math.PI / 2;
   sword.add(handle);
 
-  const guard = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.05, 0.08), trim);
+  const guard = new THREE.Mesh(roundedBox(0.34, 0.05, 0.08, 0.02), trim);
   guard.position.z = 0.32;
   guard.castShadow = true;
   sword.add(guard);
 
-  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.075, 1.52), materials.blade);
+  const blade = new THREE.Mesh(roundedBox(0.05, 0.075, 1.52, 0.018), materials.blade);
   blade.position.z = 0.82;
   blade.castShadow = true;
   sword.add(blade);
   const bladeEdge = new THREE.Mesh(
-    new THREE.BoxGeometry(0.012, 0.09, 1.44),
+    roundedBox(0.012, 0.09, 1.44, 0.005),
     new THREE.MeshBasicMaterial({ color: 0xbffeff, toneMapped: false }),
   );
   bladeEdge.position.set(0.034, 0, 0.86);
@@ -2613,10 +2702,10 @@ function createPlayer() {
   sword.rotation.set(-0.48, -0.45, -0.08);
   model.add(sword);
 
-  const keyLight = new THREE.PointLight(0xfff3df, 1.35, 4.4, 2.1);
+  const keyLight = new THREE.PointLight(0xfff3df, 1.58, 5.2, 2.1);
   keyLight.position.set(-0.7, 1.6, 1.25);
   group.add(keyLight);
-  const rimLight = new THREE.PointLight(0xff4a7d, 0.85, 3.5, 2.0);
+  const rimLight = new THREE.PointLight(0xff4a7d, 0.92, 4.0, 2.0);
   rimLight.position.set(0.9, 1.25, -0.55);
   group.add(rimLight);
 
@@ -3135,35 +3224,38 @@ function createEnemy(x, z, level) {
   const bodyMaterial = materials.enemyBody.clone();
   bodyMaterial.emissive = new THREE.Color(0x000000);
   const jacketMaterial = new THREE.MeshStandardMaterial({
-    color: 0x1c2028,
-    map: characterTexture(characterPanels.tacticalFabric),
-    roughness: 0.42,
-    metalness: 0.2,
+    color: 0xd6c8cb,
+    map: cinematicCharacterTexture(characterCinematicPanels.tacticalFabric),
+    roughness: 0.48,
+    metalness: 0.18,
+    envMapIntensity: 0.86,
   });
   const pantsMaterial = new THREE.MeshStandardMaterial({
-    color: 0x11151b,
-    map: characterTexture(characterPanels.blackRubber),
+    color: 0xcccccc,
+    map: cinematicCharacterTexture(characterCinematicPanels.meshSuit),
     roughness: 0.56,
     metalness: 0.12,
   });
   const bootMaterial = new THREE.MeshStandardMaterial({
-    color: 0x050607,
-    map: characterTexture(characterPanels.blackRubber),
+    color: 0xb5b5b5,
+    map: cinematicCharacterTexture(characterCinematicPanels.boots),
     roughness: 0.62,
     metalness: 0.12,
   });
   const armorMaterial = new THREE.MeshStandardMaterial({
-    color: 0x5d5961,
-    map: characterTexture(characterPanels.gunmetal),
-    roughness: 0.3,
+    color: 0xf1b1b5,
+    map: cinematicCharacterTexture(characterCinematicPanels.enemyArmor),
+    roughness: 0.25,
     metalness: 0.58,
+    envMapIntensity: 1.18,
     emissive: 0x19060d,
-    emissiveIntensity: 0.18,
+    emissiveIntensity: 0.12,
   });
   const skinMaterial = new THREE.MeshStandardMaterial({
-    color: 0x17191b,
-    roughness: 0.38,
-    metalness: 0.28,
+    color: 0xd8d0d1,
+    map: cinematicCharacterTexture(characterCinematicPanels.helmet),
+    roughness: 0.28,
+    metalness: 0.42,
   });
   const enemyAccent = materials.enemyAccent.clone();
 
@@ -3175,38 +3267,38 @@ function createEnemy(x, z, level) {
   );
   body.scale.z = 0.76;
 
-  const jacket = makePart(model, new THREE.BoxGeometry(0.82, 0.52, 0.12), jacketMaterial, [0, 1.22, 0.32]);
+  const jacket = makePart(model, roundedBox(0.82, 0.52, 0.12, 0.055), jacketMaterial, [0, 1.22, 0.32]);
   jacket.rotation.x = -0.08;
-  const chestArmor = makePart(model, new THREE.BoxGeometry(0.54, 0.48, 0.085), armorMaterial, [0, 1.27, 0.41], [-0.08, 0, 0]);
-  const gangStripe = makePart(model, new THREE.BoxGeometry(0.08, 0.46, 0.04), enemyAccent, [-0.18, 1.23, 0.4]);
+  const chestArmor = makePart(model, roundedBox(0.54, 0.48, 0.085, 0.055), armorMaterial, [0, 1.27, 0.41], [-0.08, 0, 0]);
+  const gangStripe = makePart(model, roundedBox(0.08, 0.46, 0.04, 0.018), enemyAccent, [-0.18, 1.23, 0.4]);
   gangStripe.castShadow = false;
-  const belt = makePart(model, new THREE.BoxGeometry(0.78, 0.12, 0.48), bootMaterial, [0, 0.78, 0]);
+  const belt = makePart(model, roundedBox(0.78, 0.12, 0.48, 0.045), bootMaterial, [0, 0.78, 0]);
 
-  const shoulderL = makePart(model, new THREE.BoxGeometry(0.36, 0.18, 0.46), armorMaterial, [-0.48, 1.49, 0.02], [0, 0, -0.16]);
-  const shoulderR = makePart(model, new THREE.BoxGeometry(0.36, 0.18, 0.46), armorMaterial, [0.48, 1.49, 0.02], [0, 0, 0.16]);
+  const shoulderL = makePart(model, roundedBox(0.36, 0.18, 0.46, 0.065), armorMaterial, [-0.48, 1.49, 0.02], [0, 0, -0.16]);
+  const shoulderR = makePart(model, roundedBox(0.36, 0.18, 0.46, 0.065), armorMaterial, [0.48, 1.49, 0.02], [0, 0, 0.16]);
   shoulderL.material = armorMaterial;
   shoulderR.material = armorMaterial;
 
   const head = makePart(model, new THREE.SphereGeometry(0.235, 14, 11), skinMaterial, [0, 1.86, 0.04]);
   head.scale.set(0.92, 1.02, 0.9);
-  const mask = makePart(model, new THREE.BoxGeometry(0.42, 0.17, 0.08), bootMaterial, [0, 1.82, 0.23]);
-  const visor = makePart(model, new THREE.BoxGeometry(0.34, 0.07, 0.052), enemyAccent, [0, 1.91, 0.28]);
+  const mask = makePart(model, roundedBox(0.42, 0.17, 0.08, 0.045), bootMaterial, [0, 1.82, 0.23]);
+  const visor = makePart(model, roundedBox(0.34, 0.07, 0.052, 0.025), enemyAccent, [0, 1.91, 0.28]);
   visor.castShadow = false;
 
   const armL = makePart(model, new THREE.CapsuleGeometry(0.085, 0.44, 5, 9), jacketMaterial, [-0.58, 1.12, 0.06], [0.14, 0.02, -0.18]);
   const armR = makePart(model, new THREE.CapsuleGeometry(0.085, 0.44, 5, 9), jacketMaterial, [0.58, 1.12, 0.1], [-0.1, -0.02, 0.18]);
-  makePart(model, new THREE.BoxGeometry(0.15, 0.42, 0.12), armorMaterial, [-0.65, 1.08, 0.16], [0.14, 0.02, -0.12]);
-  makePart(model, new THREE.BoxGeometry(0.15, 0.42, 0.12), armorMaterial, [0.65, 1.08, 0.16], [-0.1, -0.02, 0.12]);
-  const gloveL = makePart(model, new THREE.BoxGeometry(0.15, 0.15, 0.18), bootMaterial, [-0.63, 0.86, 0.16]);
-  const gloveR = makePart(model, new THREE.BoxGeometry(0.15, 0.15, 0.18), bootMaterial, [0.64, 0.88, 0.18]);
+  makePart(model, roundedBox(0.15, 0.42, 0.12, 0.04), armorMaterial, [-0.65, 1.08, 0.16], [0.14, 0.02, -0.12]);
+  makePart(model, roundedBox(0.15, 0.42, 0.12, 0.04), armorMaterial, [0.65, 1.08, 0.16], [-0.1, -0.02, 0.12]);
+  const gloveL = makePart(model, roundedBox(0.15, 0.15, 0.18, 0.045), bootMaterial, [-0.63, 0.86, 0.16]);
+  const gloveR = makePart(model, roundedBox(0.15, 0.15, 0.18, 0.045), bootMaterial, [0.64, 0.88, 0.18]);
 
   const legL = makePart(model, new THREE.CapsuleGeometry(0.105, 0.54, 5, 9), pantsMaterial, [-0.17, 0.42, 0.02], [0.03, 0.02, 0.03]);
   const legR = makePart(model, new THREE.CapsuleGeometry(0.105, 0.54, 5, 9), pantsMaterial, [0.17, 0.42, 0.02], [-0.03, -0.02, -0.03]);
-  makePart(model, new THREE.BoxGeometry(0.18, 0.42, 0.12), armorMaterial, [-0.18, 0.45, 0.16], [0.04, 0, 0.03]);
-  makePart(model, new THREE.BoxGeometry(0.18, 0.42, 0.12), armorMaterial, [0.18, 0.45, 0.16], [-0.04, 0, -0.03]);
-  makePart(model, new THREE.BoxGeometry(0.62, 0.62, 0.06), jacketMaterial, [0, 0.72, -0.28], [0.14, 0, 0]);
-  makePart(model, new THREE.BoxGeometry(0.22, 0.16, 0.36), bootMaterial, [-0.17, 0.13, 0.1]);
-  makePart(model, new THREE.BoxGeometry(0.22, 0.16, 0.36), bootMaterial, [0.17, 0.13, 0.1]);
+  makePart(model, roundedBox(0.18, 0.42, 0.12, 0.045), armorMaterial, [-0.18, 0.45, 0.16], [0.04, 0, 0.03]);
+  makePart(model, roundedBox(0.18, 0.42, 0.12, 0.045), armorMaterial, [0.18, 0.45, 0.16], [-0.04, 0, -0.03]);
+  makePart(model, roundedBox(0.62, 0.62, 0.06, 0.04), jacketMaterial, [0, 0.72, -0.28], [0.14, 0, 0]);
+  makePart(model, roundedBox(0.22, 0.16, 0.36, 0.06), bootMaterial, [-0.17, 0.13, 0.1]);
+  makePart(model, roundedBox(0.22, 0.16, 0.36, 0.06), bootMaterial, [0.17, 0.13, 0.1]);
 
   const baton = new THREE.Mesh(
     new THREE.CylinderGeometry(0.038, 0.038, 1.05, 10),
