@@ -4,6 +4,7 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import characterCinematicAtlasUrl from "./assets/character-cinematic-atlas.png";
 import characterMaterialAtlasUrl from "./assets/character-material-atlas.png";
+import characterWaveAtlasUrl from "./assets/character-wave-atlas.png";
 import hkCinematicStreetUrl from "./assets/hk-cinematic-street.png";
 import hkCloseStreetAtlasUrl from "./assets/hk-close-street-atlas.png";
 import hkMaterialAtlasUrl from "./assets/hk-material-atlas.png";
@@ -112,6 +113,10 @@ function atlasGridCell(col, row, pad = 0.0075) {
   ];
 }
 
+function waveAtlasCell(col, row, pad = 0.0075) {
+  return { atlas: "waveCharacter", rect: atlasGridCell(col, row, pad) };
+}
+
 const atlasPanels = {
   wetRoad: [0.0, 0.0, 0.435, 0.36],
   sidewalk: [0.0, 0.36, 0.435, 0.12],
@@ -179,6 +184,200 @@ const characterCinematicPanels = {
   decals: atlasGridCell(3, 3),
 };
 
+const characterWavePanels = {
+  orangeRaincoat: waveAtlasCell(0, 0),
+  orangeArmor: waveAtlasCell(1, 0),
+  gunmetal: waveAtlasCell(2, 0),
+  blackHelmet: waveAtlasCell(3, 0),
+  cyanVisor: waveAtlasCell(0, 1),
+  magentaVisor: waveAtlasCell(1, 1),
+  tacticalFabric: waveAtlasCell(2, 1),
+  rubberGloves: waveAtlasCell(3, 1),
+  harness: waveAtlasCell(0, 2),
+  boots: waveAtlasCell(1, 2),
+  meshSuit: waveAtlasCell(2, 2),
+  redArmor: waveAtlasCell(3, 2),
+  cyanArmor: waveAtlasCell(0, 3),
+  violetArmor: waveAtlasCell(1, 3),
+  whiteArmor: waveAtlasCell(2, 3),
+  greenArmor: waveAtlasCell(3, 3),
+};
+
+const heroVisualPalette = {
+  name: "橙黃雨衣",
+  gltfPanel: characterWavePanels.orangeRaincoat,
+  gltfColor: 0xffffff,
+  gltfRoughness: 0.2,
+  gltfMetalness: 0.38,
+  gltfEnv: 1.46,
+  gltfEmissiveBoost: 0.04,
+  metalColor: 0xffd08a,
+  armorColor: 0xffffff,
+  coatColor: 0xffffff,
+  deepCoatColor: 0x3d1e11,
+  rubberColor: 0x201916,
+  harnessColor: 0x352419,
+  decalsColor: 0xffeb9b,
+  visorColor: 0xcafffb,
+  bladeColor: 0xf9fbff,
+  metalPanel: characterWavePanels.gunmetal,
+  armorPanel: characterWavePanels.orangeArmor,
+  coatPanel: characterWavePanels.orangeRaincoat,
+  deepCoatPanel: characterWavePanels.orangeRaincoat,
+  rubberPanel: characterWavePanels.rubberGloves,
+  visorPanel: characterWavePanels.cyanVisor,
+  accent: 0x2df4ed,
+  secondaryAccent: 0xff2f6d,
+  emissive: 0x2a1002,
+  decalEmissive: 0x301a04,
+};
+
+const enemyWavePalettes = [
+  {
+    name: "紅甲敵影",
+    gltfPanel: characterWavePanels.redArmor,
+    gltfColor: 0xffffff,
+    metalColor: 0xe08387,
+    armorColor: 0xe3343e,
+    coatColor: 0x5a141b,
+    deepCoatColor: 0x1c0b10,
+    rubberColor: 0x171111,
+    harnessColor: 0x2b1516,
+    decalsColor: 0xff9aaa,
+    visorColor: 0xff8fa5,
+    bodyColor: 0x7a1c26,
+    jacketColor: 0x5a141b,
+    pantsColor: 0x171111,
+    bootColor: 0x151010,
+    skinColor: 0x2a1619,
+    armorPanel: characterWavePanels.redArmor,
+    coatPanel: characterWavePanels.tacticalFabric,
+    deepCoatPanel: characterWavePanels.meshSuit,
+    rubberPanel: characterWavePanels.rubberGloves,
+    visorPanel: characterWavePanels.magentaVisor,
+    accent: 0xff2f6d,
+    secondaryAccent: 0x2df4ed,
+    emissive: 0x2b0611,
+    hitColor: 0xff3b67,
+  },
+  {
+    name: "青藍突擊",
+    gltfPanel: characterWavePanels.cyanArmor,
+    gltfColor: 0xffffff,
+    metalColor: 0x6fe9ff,
+    armorColor: 0x1c7f91,
+    coatColor: 0x12323a,
+    deepCoatColor: 0x071a20,
+    rubberColor: 0x0a171a,
+    harnessColor: 0x17383f,
+    decalsColor: 0x9df7ff,
+    visorColor: 0xa9fff8,
+    bodyColor: 0x17343a,
+    jacketColor: 0x102a31,
+    pantsColor: 0x0a1619,
+    bootColor: 0x0a1214,
+    skinColor: 0x1a3337,
+    armorPanel: characterWavePanels.cyanArmor,
+    coatPanel: characterWavePanels.tacticalFabric,
+    deepCoatPanel: characterWavePanels.meshSuit,
+    rubberPanel: characterWavePanels.rubberGloves,
+    visorPanel: characterWavePanels.cyanVisor,
+    accent: 0x2df4ed,
+    secondaryAccent: 0xffb23a,
+    emissive: 0x042126,
+    hitColor: 0x5ffff5,
+  },
+  {
+    name: "紫霓外骨",
+    gltfPanel: characterWavePanels.violetArmor,
+    gltfColor: 0xffffff,
+    metalColor: 0xc39cff,
+    armorColor: 0x6d45b8,
+    coatColor: 0x221335,
+    deepCoatColor: 0x14091f,
+    rubberColor: 0x130e18,
+    harnessColor: 0x2e1f42,
+    decalsColor: 0xd8b7ff,
+    visorColor: 0xffb0f7,
+    bodyColor: 0x2a173e,
+    jacketColor: 0x20112f,
+    pantsColor: 0x120d18,
+    bootColor: 0x100b14,
+    skinColor: 0x251936,
+    armorPanel: characterWavePanels.violetArmor,
+    coatPanel: characterWavePanels.tacticalFabric,
+    deepCoatPanel: characterWavePanels.meshSuit,
+    rubberPanel: characterWavePanels.rubberGloves,
+    visorPanel: characterWavePanels.magentaVisor,
+    accent: 0xb56bff,
+    secondaryAccent: 0xff2f6d,
+    emissive: 0x15082a,
+    hitColor: 0xd069ff,
+  },
+  {
+    name: "白灰戰術",
+    gltfPanel: characterWavePanels.whiteArmor,
+    gltfColor: 0xffffff,
+    metalColor: 0xd5e2e5,
+    armorColor: 0xb9c6ca,
+    coatColor: 0x33383b,
+    deepCoatColor: 0x171b1d,
+    rubberColor: 0x151719,
+    harnessColor: 0x3b3d3f,
+    decalsColor: 0xffed9c,
+    visorColor: 0xfff1a6,
+    bodyColor: 0x3c4245,
+    jacketColor: 0x282e31,
+    pantsColor: 0x181c1e,
+    bootColor: 0x121517,
+    skinColor: 0x495155,
+    armorPanel: characterWavePanels.whiteArmor,
+    coatPanel: characterWavePanels.tacticalFabric,
+    deepCoatPanel: characterWavePanels.meshSuit,
+    rubberPanel: characterWavePanels.rubberGloves,
+    visorPanel: characterWavePanels.cyanVisor,
+    accent: 0xffdf70,
+    secondaryAccent: 0x2df4ed,
+    emissive: 0x1d1804,
+    hitColor: 0xffe083,
+  },
+  {
+    name: "毒綠裝甲",
+    gltfPanel: characterWavePanels.greenArmor,
+    gltfColor: 0xffffff,
+    metalColor: 0x89ffb4,
+    armorColor: 0x2e8b55,
+    coatColor: 0x0f2718,
+    deepCoatColor: 0x09150d,
+    rubberColor: 0x0c120e,
+    harnessColor: 0x1e3a27,
+    decalsColor: 0xa6ffbf,
+    visorColor: 0xadffc1,
+    bodyColor: 0x14301d,
+    jacketColor: 0x102518,
+    pantsColor: 0x0a150e,
+    bootColor: 0x07110b,
+    skinColor: 0x193422,
+    armorPanel: characterWavePanels.greenArmor,
+    coatPanel: characterWavePanels.tacticalFabric,
+    deepCoatPanel: characterWavePanels.meshSuit,
+    rubberPanel: characterWavePanels.rubberGloves,
+    visorPanel: characterWavePanels.cyanVisor,
+    accent: 0x5cff9d,
+    secondaryAccent: 0xff2f6d,
+    emissive: 0x061f0f,
+    hitColor: 0x7cffaa,
+  },
+];
+
+function getEnemyWavePalette(level = 1) {
+  return enemyWavePalettes[(Math.max(1, level) - 1) % enemyWavePalettes.length];
+}
+
+function resolveActorPalette(role, level = 1, palette = null) {
+  return palette ?? (role === "player" ? heroVisualPalette : getEnemyWavePalette(level));
+}
+
 let gameStarted = false;
 let gameOver = false;
 let wave = 0;
@@ -211,9 +410,10 @@ scene.add(rain.points);
 attachRiggedActor(player, {
   role: "player",
   desiredHeight: 2.12,
-  tint: 0x071017,
-  accent: 0x2df4ed,
-  secondaryAccent: 0xff2f6d,
+  palette: heroVisualPalette,
+  tint: heroVisualPalette.gltfColor,
+  accent: heroVisualPalette.accent,
+  secondaryAccent: heroVisualPalette.secondaryAccent,
 });
 
 setupLights();
@@ -337,6 +537,7 @@ function createGeneratedAssetTextures() {
   return {
     character: load(characterMaterialAtlasUrl),
     cinematicCharacter: load(characterCinematicAtlasUrl),
+    waveCharacter: load(characterWaveAtlasUrl),
     atlas: load(hkMaterialAtlasUrl),
     closeStreet: load(hkCloseStreetAtlasUrl),
     cinematicStreet: (() => {
@@ -377,6 +578,13 @@ function characterTexture(panel) {
 
 function cinematicCharacterTexture(panel) {
   return atlasTexture(panel, generatedAssets.cinematicCharacter);
+}
+
+function actorCharacterTexture(panel) {
+  if (panel?.atlas === "waveCharacter") {
+    return atlasTexture(panel.rect, generatedAssets.waveCharacter);
+  }
+  return cinematicCharacterTexture(panel);
 }
 
 function closeStreetTexture(panel) {
@@ -455,23 +663,23 @@ function createMaterials() {
       metalness: 0.18,
     }),
     playerCoat: new THREE.MeshStandardMaterial({
-      color: 0xe6f0ed,
-      map: cinematicCharacterTexture(characterCinematicPanels.wetCoat),
+      color: heroVisualPalette.coatColor,
+      map: actorCharacterTexture(heroVisualPalette.coatPanel),
       roughness: 0.2,
       metalness: 0.34,
       envMapIntensity: 1.22,
     }),
     playerArmor: new THREE.MeshStandardMaterial({
-      color: 0xdce9e7,
-      map: cinematicCharacterTexture(characterCinematicPanels.carbonArmor),
+      color: heroVisualPalette.armorColor,
+      map: actorCharacterTexture(heroVisualPalette.armorPanel),
       roughness: 0.2,
       metalness: 0.72,
       envMapIntensity: 1.45,
     }),
     playerAccent: new THREE.MeshStandardMaterial({
-      color: 0xb8fffb,
+      color: heroVisualPalette.accent,
       map: cinematicCharacterTexture(characterCinematicPanels.cyanCircuit),
-      emissive: 0x126968,
+      emissive: heroVisualPalette.accent,
       emissiveIntensity: 1.05,
       roughness: 0.18,
       metalness: 0.5,
@@ -2174,8 +2382,8 @@ async function attachRiggedActor(actor, options) {
     if (actor.removed || (!actor.group.parent && actor !== player)) return;
 
     const root = SkeletonUtils.clone(gltf.scene);
-    const tint = new THREE.Color(options.tint);
-    const accent = new THREE.Color(options.accent);
+    const palette = resolveActorPalette(options.role, options.level, options.palette);
+    const accent = new THREE.Color(options.accent ?? palette.accent);
     const rigMaterials = [];
 
     root.traverse((node) => {
@@ -2189,15 +2397,15 @@ async function attachRiggedActor(actor, options) {
 
       const materialsToTune = Array.isArray(node.material) ? node.material : [node.material];
       for (const material of materialsToTune) {
-        const baseMap = options.role === "player"
-          ? characterCinematicPanels.wetCoat
-          : characterCinematicPanels.enemyArmor;
-        if (material.color) material.color.setHex(options.role === "player" ? 0xe8f4f1 : 0xf1c1c4);
-        if ("map" in material) material.map = cinematicCharacterTexture(baseMap);
-        if ("roughness" in material) material.roughness = options.role === "player" ? 0.22 : 0.32;
-        if ("metalness" in material) material.metalness = options.role === "player" ? 0.44 : 0.48;
-        if ("envMapIntensity" in material) material.envMapIntensity = options.role === "player" ? 1.34 : 1.12;
-        if (material.emissive) material.emissive.copy(accent).multiplyScalar(options.role === "player" ? 0.045 : 0.075);
+        if (material.color) material.color.setHex(palette.gltfColor);
+        if ("map" in material) {
+          material.map = actorCharacterTexture(palette.gltfPanel);
+          material.needsUpdate = true;
+        }
+        if ("roughness" in material) material.roughness = palette.gltfRoughness ?? (options.role === "player" ? 0.22 : 0.32);
+        if ("metalness" in material) material.metalness = palette.gltfMetalness ?? (options.role === "player" ? 0.44 : 0.48);
+        if ("envMapIntensity" in material) material.envMapIntensity = palette.gltfEnv ?? (options.role === "player" ? 1.34 : 1.12);
+        if (material.emissive) material.emissive.copy(accent).multiplyScalar(palette.gltfEmissiveBoost ?? 0.07);
         rigMaterials.push(material);
       }
     });
@@ -2218,7 +2426,7 @@ async function attachRiggedActor(actor, options) {
       actions[clip.name] = mixer.clipAction(clip);
     }
 
-    const kit = createRiggedCyberKit(options.role, options.accent, options.secondaryAccent);
+    const kit = createRiggedCyberKit(options.role, options.accent ?? palette.accent, options.secondaryAccent ?? palette.secondaryAccent, palette);
     actor.group.add(root);
     actor.group.add(kit);
     actor.gltfRoot = root;
@@ -2239,10 +2447,11 @@ async function attachRiggedActor(actor, options) {
   }
 }
 
-function createRiggedCyberKit(role, accentHex, secondaryAccentHex) {
+function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette = null) {
   const kit = new THREE.Group();
+  const palette = resolveActorPalette(role, 1, visualPalette);
   const neon = new THREE.MeshBasicMaterial({
-    color: accentHex,
+    color: accentHex ?? palette.accent,
     transparent: true,
     opacity: 0.74,
     blending: THREE.AdditiveBlending,
@@ -2250,7 +2459,7 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex) {
     toneMapped: false,
   });
   const neonSecondary = new THREE.MeshBasicMaterial({
-    color: secondaryAccentHex,
+    color: secondaryAccentHex ?? palette.secondaryAccent,
     transparent: true,
     opacity: 0.42,
     blending: THREE.AdditiveBlending,
@@ -2258,83 +2467,83 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex) {
     toneMapped: false,
   });
   const metal = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0xdce8e6 : 0xe5bdc1,
-    map: cinematicCharacterTexture(characterCinematicPanels.gunmetal),
+    color: palette.metalColor,
+    map: actorCharacterTexture(palette.metalPanel ?? characterCinematicPanels.gunmetal),
     roughness: 0.18,
     metalness: 0.82,
     envMapIntensity: 1.32,
-    emissive: role === "player" ? 0x06191b : 0x1b070d,
+    emissive: palette.emissive,
     emissiveIntensity: 0.12,
   });
   const armor = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0xe3efec : 0xf2b4b8,
-    map: cinematicCharacterTexture(role === "player" ? characterCinematicPanels.carbonArmor : characterCinematicPanels.enemyArmor),
+    color: palette.armorColor,
+    map: actorCharacterTexture(palette.armorPanel ?? characterCinematicPanels.enemyArmor),
     roughness: role === "player" ? 0.19 : 0.24,
     metalness: role === "player" ? 0.72 : 0.6,
     envMapIntensity: role === "player" ? 1.4 : 1.18,
-    emissive: role === "player" ? 0x071c1f : 0x22070f,
+    emissive: palette.emissive,
     emissiveIntensity: 0.16,
   });
   const coat = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0xe3ece8 : 0xd1c3c7,
-    map: cinematicCharacterTexture(role === "player" ? characterCinematicPanels.wetCoat : characterCinematicPanels.tacticalFabric),
+    color: palette.coatColor,
+    map: actorCharacterTexture(palette.coatPanel ?? characterCinematicPanels.tacticalFabric),
     roughness: role === "player" ? 0.22 : 0.46,
     metalness: role === "player" ? 0.3 : 0.16,
     envMapIntensity: 1.05,
-    emissive: role === "player" ? 0x061617 : 0x18070c,
+    emissive: palette.emissive,
     emissiveIntensity: 0.12,
     transparent: true,
     opacity: 0.88,
     depthWrite: false,
   });
   const deepCoat = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0xd7e4e0 : 0xc9bdc0,
-    map: cinematicCharacterTexture(role === "player" ? characterCinematicPanels.wetCoat : characterCinematicPanels.meshSuit),
+    color: palette.deepCoatColor,
+    map: actorCharacterTexture(palette.deepCoatPanel ?? characterCinematicPanels.meshSuit),
     roughness: role === "player" ? 0.24 : 0.52,
     metalness: role === "player" ? 0.28 : 0.12,
     envMapIntensity: 0.94,
-    emissive: role === "player" ? 0x031517 : 0x1d060d,
+    emissive: palette.emissive,
     emissiveIntensity: 0.1,
   });
   const visorMaterial = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0xd2fffb : 0xffced8,
-    map: cinematicCharacterTexture(role === "player" ? characterCinematicPanels.cyanVisor : characterCinematicPanels.magentaVisor),
+    color: palette.visorColor,
+    map: actorCharacterTexture(palette.visorPanel ?? (role === "player" ? characterCinematicPanels.cyanVisor : characterCinematicPanels.magentaVisor)),
     roughness: 0.08,
     metalness: 0.58,
     envMapIntensity: 1.5,
-    emissive: role === "player" ? 0x18c9c1 : 0xff2f6d,
+    emissive: palette.accent,
     emissiveIntensity: role === "player" ? 0.95 : 0.9,
   });
   const rubber = new THREE.MeshStandardMaterial({
-    color: 0xb6b6b6,
-    map: cinematicCharacterTexture(characterCinematicPanels.rubberGloves),
+    color: palette.rubberColor,
+    map: actorCharacterTexture(palette.rubberPanel ?? characterCinematicPanels.rubberGloves),
     roughness: 0.5,
     metalness: 0.12,
     envMapIntensity: 0.8,
   });
   const harness = new THREE.MeshStandardMaterial({
-    color: 0xe0d5ce,
+    color: palette.harnessColor,
     map: cinematicCharacterTexture(characterCinematicPanels.harness),
     roughness: 0.4,
     metalness: 0.24,
     envMapIntensity: 1.0,
   });
   const decals = new THREE.MeshStandardMaterial({
-    color: role === "player" ? 0xbad6d2 : 0xd6a2a8,
+    color: palette.decalsColor,
     map: cinematicCharacterTexture(characterCinematicPanels.decals),
     roughness: 0.36,
     metalness: 0.22,
     envMapIntensity: 1.1,
-    emissive: role === "player" ? 0x031211 : 0x120307,
+    emissive: palette.decalEmissive ?? palette.emissive,
     emissiveIntensity: 0.045,
   });
   const bladeKit = new THREE.MeshStandardMaterial({
-    color: 0xf3fbff,
+    color: palette.bladeColor ?? 0xf3fbff,
     map: cinematicCharacterTexture(characterCinematicPanels.bladeMetal),
     roughness: 0.12,
     metalness: 0.94,
     envMapIntensity: 1.5,
-    emissive: role === "player" ? 0x244d58 : 0x551024,
+    emissive: role === "player" ? palette.accent : palette.secondaryAccent,
     emissiveIntensity: 0.24,
   });
   const swayParts = [];
@@ -2605,21 +2814,21 @@ function createPlayer() {
   group.add(model);
 
   const skin = new THREE.MeshStandardMaterial({
-    color: 0xe5efec,
-    map: cinematicCharacterTexture(characterCinematicPanels.helmet),
+    color: heroVisualPalette.armorColor,
+    map: actorCharacterTexture(heroVisualPalette.gltfPanel),
     roughness: 0.24,
     metalness: 0.56,
     emissive: 0x02080a,
     emissiveIntensity: 0.08,
   });
   const hair = new THREE.MeshStandardMaterial({
-    color: 0xb6b6b6,
-    map: cinematicCharacterTexture(characterCinematicPanels.rubberGloves),
+    color: heroVisualPalette.rubberColor,
+    map: actorCharacterTexture(heroVisualPalette.rubberPanel),
     roughness: 0.48,
     metalness: 0.16,
   });
   const boot = new THREE.MeshStandardMaterial({
-    color: 0xc7c7c7,
+    color: heroVisualPalette.rubberColor,
     map: cinematicCharacterTexture(characterCinematicPanels.boots),
     roughness: 0.5,
     metalness: 0.16,
@@ -3194,6 +3403,7 @@ let enemyId = 0;
 
 function spawnWave() {
   wave += 1;
+  const wavePalette = getEnemyWavePalette(wave);
   const count = Math.min(window.innerWidth < 760 ? 3 : 4, 1 + wave + Math.floor(wave / 2));
   const baseZ = clamp(player.group.position.z - 13 - wave * 2, world.streetMinZ + 8, world.streetMaxZ - 10);
   const spread = 8 + Math.min(wave * 1.8, 12);
@@ -3210,54 +3420,60 @@ function spawnWave() {
 
   showEncounter(`CONTACT  WAVE ${wave}`);
   const locations = ["彌敦道 雨夜交火", "佐敦後巷 接敵", "灣仔天橋 封鎖", "中環碼頭 追擊", "霓虹街市 壓制"];
-  setStatus(locations[(wave - 1) % locations.length], true, 2.3);
+  setStatus(`${locations[(wave - 1) % locations.length]} / ${wavePalette.name}`, true, 2.3);
 }
 
 function createEnemy(x, z, level) {
   const group = new THREE.Group();
   group.position.set(x, 0, z);
   const shouldRig = enemies.filter((enemy) => enemy.useRig && !enemy.dead).length < renderSettings.maxRiggedEnemies;
+  const palette = getEnemyWavePalette(level);
 
   const model = new THREE.Group();
   group.add(model);
 
   const bodyMaterial = materials.enemyBody.clone();
-  bodyMaterial.emissive = new THREE.Color(0x000000);
+  bodyMaterial.color.setHex(palette.bodyColor);
+  bodyMaterial.map = actorCharacterTexture(palette.coatPanel ?? characterCinematicPanels.tacticalFabric);
+  bodyMaterial.emissive = new THREE.Color(palette.emissive);
+  bodyMaterial.emissiveIntensity = 0.06;
   const jacketMaterial = new THREE.MeshStandardMaterial({
-    color: 0xd6c8cb,
-    map: cinematicCharacterTexture(characterCinematicPanels.tacticalFabric),
+    color: palette.jacketColor,
+    map: actorCharacterTexture(palette.coatPanel ?? characterCinematicPanels.tacticalFabric),
     roughness: 0.48,
     metalness: 0.18,
     envMapIntensity: 0.86,
   });
   const pantsMaterial = new THREE.MeshStandardMaterial({
-    color: 0xcccccc,
-    map: cinematicCharacterTexture(characterCinematicPanels.meshSuit),
+    color: palette.pantsColor,
+    map: actorCharacterTexture(palette.deepCoatPanel ?? characterCinematicPanels.meshSuit),
     roughness: 0.56,
     metalness: 0.12,
   });
   const bootMaterial = new THREE.MeshStandardMaterial({
-    color: 0xb5b5b5,
-    map: cinematicCharacterTexture(characterCinematicPanels.boots),
+    color: palette.bootColor,
+    map: actorCharacterTexture(palette.rubberPanel ?? characterCinematicPanels.boots),
     roughness: 0.62,
     metalness: 0.12,
   });
   const armorMaterial = new THREE.MeshStandardMaterial({
-    color: 0xf1b1b5,
-    map: cinematicCharacterTexture(characterCinematicPanels.enemyArmor),
+    color: palette.armorColor,
+    map: actorCharacterTexture(palette.armorPanel ?? characterCinematicPanels.enemyArmor),
     roughness: 0.25,
     metalness: 0.58,
     envMapIntensity: 1.18,
-    emissive: 0x19060d,
+    emissive: palette.emissive,
     emissiveIntensity: 0.12,
   });
   const skinMaterial = new THREE.MeshStandardMaterial({
-    color: 0xd8d0d1,
+    color: palette.skinColor,
     map: cinematicCharacterTexture(characterCinematicPanels.helmet),
     roughness: 0.28,
     metalness: 0.42,
   });
   const enemyAccent = materials.enemyAccent.clone();
+  enemyAccent.color.setHex(palette.accent);
+  enemyAccent.emissive.setHex(palette.accent);
 
   const body = makePart(
     model,
@@ -3302,7 +3518,7 @@ function createEnemy(x, z, level) {
 
   const baton = new THREE.Mesh(
     new THREE.CylinderGeometry(0.038, 0.038, 1.05, 10),
-    new THREE.MeshStandardMaterial({ color: 0x34383f, roughness: 0.22, metalness: 0.76 }),
+    new THREE.MeshStandardMaterial({ color: palette.metalColor, roughness: 0.22, metalness: 0.76 }),
   );
   baton.rotation.x = Math.PI / 2;
   baton.position.set(-0.48, 1.08, 0.2);
@@ -3310,6 +3526,7 @@ function createEnemy(x, z, level) {
   model.add(baton);
 
   const healthBar = createEnemyHealthBar();
+  healthBar.fill.material.color.setHex(palette.accent);
   group.add(healthBar.group);
 
   const billboard = { group: new THREE.Group(), main: null };
@@ -3348,14 +3565,17 @@ function createEnemy(x, z, level) {
     deathTimer: 0,
     removed: false,
     useRig: shouldRig,
+    palette,
   };
   if (shouldRig) {
     attachRiggedActor(enemy, {
       role: "enemy",
       desiredHeight: 1.98,
-      tint: 0x120b10,
-      accent: 0xff2f6d,
-      secondaryAccent: 0x2df4ed,
+      level,
+      palette,
+      tint: palette.gltfColor,
+      accent: palette.accent,
+      secondaryAccent: palette.secondaryAccent,
     });
   }
   return enemy;
@@ -3385,7 +3605,7 @@ function updateEnemies(dt) {
   for (const enemy of enemies) {
     if (enemy.dead) {
       setActorAction(enemy, "Idle", 0.12);
-      setRiggedActorFlash(enemy, 0.22, 0xff2f6d);
+      setRiggedActorFlash(enemy, 0.22, enemy.palette?.hitColor ?? 0xff2f6d);
       enemy.deathTimer -= dt;
       enemy.group.position.y = damp(enemy.group.position.y, -0.45, 6, dt);
       enemy.group.rotation.z = damp(enemy.group.rotation.z, 1.24, 7, dt);
@@ -3395,12 +3615,13 @@ function updateEnemies(dt) {
     enemy.attackCooldown = Math.max(0, enemy.attackCooldown - dt);
     enemy.stun = Math.max(0, enemy.stun - dt);
     enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
-    setRiggedActorFlash(enemy, enemy.hitFlash > 0 ? 1.35 : 0, enemy.hitFlash > 0 ? 0xff335a : 0xff2f6d);
+    const palette = enemy.palette ?? enemyWavePalettes[0];
+    setRiggedActorFlash(enemy, enemy.hitFlash > 0 ? 1.35 : 0, enemy.hitFlash > 0 ? palette.hitColor : palette.accent);
     enemy.body.material.emissive = enemy.body.material.emissive || new THREE.Color(0x000000);
-    enemy.body.material.emissive.setHex(enemy.hitFlash > 0 ? 0x7b1825 : 0x000000);
-    enemy.body.material.emissiveIntensity = enemy.hitFlash > 0 ? 1.2 : 0;
+    enemy.body.material.emissive.setHex(enemy.hitFlash > 0 ? palette.hitColor : palette.emissive);
+    enemy.body.material.emissiveIntensity = enemy.hitFlash > 0 ? 1.2 : 0.06;
     if (!visualMode.actors3D) {
-      enemy.sprite.material.color.setHex(enemy.hitFlash > 0 ? 0xff8aa0 : 0xffffff);
+      enemy.sprite.material.color.setHex(enemy.hitFlash > 0 ? palette.hitColor : palette.gltfColor);
     }
 
     const toPlayer = tmpV3.copy(player.group.position).sub(enemy.group.position);
