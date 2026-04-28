@@ -2577,6 +2577,31 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     add(geometry, material, [x, y, z], rotation ?? null, options);
   };
 
+  if (role === "player") {
+    const weapon = new THREE.Group();
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 10), metal);
+    handle.rotation.x = Math.PI / 2;
+    weapon.add(handle);
+    const blade = new THREE.Mesh(roundedBox(0.05, 0.065, 1.42, 0.018), bladeKit);
+    blade.position.z = 0.75;
+    blade.castShadow = true;
+    weapon.add(blade);
+    const edge = new THREE.Mesh(roundedBox(0.014, 0.078, 1.34, 0.006), neon);
+    edge.position.set(0.034, 0, 0.78);
+    weapon.add(edge);
+    weapon.position.set(0.55, 0.98, 0.18);
+    weapon.rotation.set(-0.56, -0.64, -0.18);
+    weapon.userData.basePosition = weapon.position.clone();
+    weapon.userData.baseRotation = weapon.rotation.clone();
+    kit.add(weapon);
+    kit.userData.weapon = weapon;
+    kit.userData.glowMaterials = [neon, neonSecondary];
+    kit.userData.swayParts = swayParts;
+    kit.scale.set(0.62, 0.86, 0.66);
+    kit.position.y = 0.15;
+    return kit;
+  }
+
   add(new THREE.SphereGeometry(0.24, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.78), armor, [0, 1.93, 0.02], [0.06, 0, 0]);
   add(roundedBox(0.44, 0.17, 0.18, 0.055), rubber, [0, 1.83, 0.05]);
   add(roundedBox(0.38, 0.07, 0.055, 0.028), visorMaterial, [0, 1.91, 0.238]);
