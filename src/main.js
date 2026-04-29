@@ -5,12 +5,12 @@ import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import characterCinematicAtlasUrl from "./assets/character-cinematic-atlas.png";
 import characterMaterialAtlasUrl from "./assets/character-material-atlas.png";
 import characterRosterVividUrl from "./assets/character-roster-hk-vivid-10.png";
-import characterWaveAtlasUrl from "./assets/character-wave-atlas.png";
+import characterWaveAtlasUrl from "./assets/character-wave-atlas-v2.png";
 import hkCinematicStreetUrl from "./assets/hk-cinematic-street.png";
 import hkCloseStreetAtlasUrl from "./assets/hk-close-street-atlas.png";
 import hkMaterialAtlasUrl from "./assets/hk-material-atlas.png";
 import hkRainStreetUrl from "./assets/hk-rain-street.png";
-import soldierModelUrl from "./assets/soldier.glb?url";
+import streetActorModelUrl from "./assets/street-actor.glb?url";
 import "./style.css";
 
 const canvas = document.querySelector("#game-canvas");
@@ -103,7 +103,7 @@ const cinematicSceneOffset = new THREE.Vector2(0, 0);
 const textureLoader = new THREE.TextureLoader();
 const textureReadyPromises = [];
 const gltfLoader = new GLTFLoader();
-const soldierModelPromise = gltfLoader.loadAsync(soldierModelUrl);
+const streetActorModelPromise = gltfLoader.loadAsync(streetActorModelUrl);
 const generatedAssets = createGeneratedAssetTextures();
 scene.background = visualMode.generatedScene ? generatedAssets.street : new THREE.Color(0x061018);
 
@@ -2763,12 +2763,18 @@ function roundedBox(width, height, depth, radius = 0.035, segments = 3) {
 
 async function attachRiggedActor(actor, options) {
   try {
-    const gltf = await soldierModelPromise;
+    const gltf = await streetActorModelPromise;
     if (actor.removed || (!actor.group.parent && actor !== player)) return;
 
     const root = SkeletonUtils.clone(gltf.scene);
     const palette = resolveActorPalette(options.role, options.level, options.palette);
     const accent = new THREE.Color(options.accent ?? palette.accent);
+    const rootBodyColor = options.role === "enemy"
+      ? (palette.bodyColor ?? palette.coatColor ?? palette.gltfColor)
+      : palette.gltfColor;
+    const rootPatternTexture = options.role === "enemy" && palette.pattern && palette.pattern !== "plain"
+      ? streetPatternTexture(palette.pattern, palette.coatColor, palette.accent, palette.secondaryAccent)
+      : null;
     const rigMaterials = [];
     const rigBones = {};
 
@@ -2787,9 +2793,9 @@ async function attachRiggedActor(actor, options) {
 
       const materialsToTune = Array.isArray(node.material) ? node.material : [node.material];
       for (const material of materialsToTune) {
-        if (material.color) material.color.setHex(palette.gltfColor);
+        if (material.color) material.color.setHex(rootBodyColor);
         if ("map" in material) {
-          material.map = actorCharacterTexture(palette.gltfPanel);
+          material.map = rootPatternTexture ?? actorCharacterTexture(palette.gltfPanel);
           material.needsUpdate = true;
         }
         if ("roughness" in material) material.roughness = palette.gltfRoughness ?? (options.role === "player" ? 0.22 : 0.32);
@@ -2813,7 +2819,10 @@ async function attachRiggedActor(actor, options) {
     const mixer = new THREE.AnimationMixer(root);
     const actions = {};
     for (const clip of gltf.animations) {
-      actions[clip.name] = mixer.clipAction(clip);
+      const action = mixer.clipAction(clip);
+      actions[clip.name] = action;
+      actions[clip.name.toLowerCase()] = action;
+      actions[clip.name.charAt(0).toUpperCase() + clip.name.slice(1)] = action;
     }
 
     const kit = createRiggedCyberKit(options.role, options.accent ?? palette.accent, options.secondaryAccent ?? palette.secondaryAccent, palette);
@@ -3004,6 +3013,12 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
       metalness: 0.06,
       envMapIntensity: 0.55,
     });
+    const skin = new THREE.MeshStandardMaterial({
+      color: palette.skinColor ?? 0x6a4d3a,
+      roughness: 0.58,
+      metalness: 0.04,
+      envMapIntensity: 0.64,
+    });
     const tape = new THREE.MeshStandardMaterial({
       color: 0xf2efe3,
       roughness: 0.72,
@@ -3012,7 +3027,10 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     });
     const lapelMaterial = style === "whiteSuit" ? deepCoat : decals;
 
-    add(new THREE.SphereGeometry(0.24, 18, 9, 0, Math.PI * 2, 0, Math.PI * 0.52), hair, [0, 1.99, -0.015], [0.02, 0, 0]);
+    const facePatch = add(new THREE.SphereGeometry(0.19, 18, 11), skin, [0, 1.86, 0.225], [0.02, 0, 0]);
+    facePatch.scale.set(0.84, 1.08, 0.42);
+    const hairCap = add(new THREE.SphereGeometry(0.22, 18, 9, 0, Math.PI * 2, 0, Math.PI * 0.52), hair, [0, 1.99, -0.035], [0.02, 0, 0]);
+    hairCap.scale.set(1.06, 0.54, 0.9);
     if (style === "denimLeader") {
       add(roundedBox(0.14, 0.58, 0.065, 0.03), hair, [-0.23, 1.75, -0.04], [0.1, 0, 0.18], { sway: true });
       add(roundedBox(0.14, 0.58, 0.065, 0.03), hair, [0.23, 1.75, -0.04], [0.1, 0, -0.18], { sway: true });
@@ -3139,8 +3157,8 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     kit.userData.weapon = weapon;
     kit.userData.glowMaterials = [neon, neonSecondary];
     kit.userData.swayParts = swayParts;
-    kit.scale.set(0.5, 0.72, 0.52);
-    kit.position.y = 0.04;
+    kit.scale.set(0.82, 0.96, 0.84);
+    kit.position.y = -0.02;
     return kit;
   }
 
@@ -3220,7 +3238,11 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
 
 function setActorAction(actor, actionName, fade = 0.18) {
   if (!actor.actions) return;
-  const next = actor.actions[actionName] || actor.actions.Idle || Object.values(actor.actions)[0];
+  const next = actor.actions[actionName]
+    || actor.actions[actionName.toLowerCase()]
+    || actor.actions.Idle
+    || actor.actions.idle
+    || Object.values(actor.actions)[0];
   if (!next || actor.currentAction === next) return;
 
   next.enabled = true;
