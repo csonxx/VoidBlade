@@ -28,7 +28,7 @@ const reticle = document.querySelector("#reticle");
 const skillChips = [...document.querySelectorAll("[data-skill-chip]")];
 
 const renderSettings = {
-  maxPixelRatio: window.innerWidth < 760 ? 0.66 : 0.62,
+  maxPixelRatio: window.innerWidth < 760 ? 0.72 : 0.82,
   realtimeShadows: false,
   maxScenePointLights: window.innerWidth < 760 ? 4 : 7,
   maxRiggedEnemies: window.innerWidth < 760 ? 4 : 8,
@@ -779,8 +779,16 @@ const streetLife = {
   neonMaterials: [],
   traffic: [],
 };
+const cinematicAtmosphere = {
+  rainSheets: [],
+  wetHighlights: [],
+  neonFlares: [],
+  lightShafts: [],
+};
 let scenePointLightCount = 0;
 let cinematicBackdrop = null;
+let impactFlashTexture = null;
+const effectTextureCache = new Map();
 
 const materials = createMaterials();
 const player = createPlayer();
@@ -801,6 +809,7 @@ attachRiggedActor(player, {
 
 setupLights();
 createHongKongStreet();
+createCinematicAtmosphere();
 bindInput();
 resize();
 resetGame();
@@ -2065,6 +2074,255 @@ function createBakedLightField() {
   bakedOcclusion.rotation.x = -Math.PI / 2;
   bakedOcclusion.position.set(0, 0.047, (world.streetMaxZ + world.streetMinZ) / 2);
   scene.add(bakedOcclusion);
+}
+
+function createCinematicAtmosphere() {
+  createForegroundRainSheets();
+  createMovingWetHighlights();
+  createNeonFlares();
+  createVolumetricLightShafts();
+}
+
+function createForegroundRainSheets() {
+  const baseTexture = canvasTexture(512, 1024, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    ctx.lineCap = "round";
+    for (let i = 0; i < 220; i += 1) {
+      const x = rng() * w;
+      const y = rng() * h;
+      const length = 34 + rng() * 118;
+      const alpha = 0.05 + rng() * 0.16;
+      ctx.strokeStyle = `rgba(196,236,255,${alpha})`;
+      ctx.lineWidth = 0.7 + rng() * 1.8;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - length * 0.16, y + length);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "screen";
+    for (let i = 0; i < 26; i += 1) {
+      const x = rng() * w;
+      const grad = ctx.createLinearGradient(x, 0, x + 20, h);
+      grad.addColorStop(0, "rgba(45,244,237,0)");
+      grad.addColorStop(0.5, "rgba(45,244,237,0.09)");
+      grad.addColorStop(1, "rgba(255,47,109,0)");
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2 + rng() * 4;
+      ctx.beginPath();
+      ctx.moveTo(x, -20);
+      ctx.lineTo(x - 90, h + 40);
+      ctx.stroke();
+    }
+  });
+
+  for (let i = 0; i < 3; i += 1) {
+    const texture = baseTexture.clone();
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1.55 + i * 0.45, 1.08 + i * 0.28);
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      color: i === 1 ? 0xd8ffff : 0xbbe2ff,
+      transparent: true,
+      opacity: 0.1 + i * 0.035,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: false,
+      toneMapped: false,
+    });
+    const sheet = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 4.9), material);
+    sheet.position.set((i - 1) * 0.34, -0.08 + i * 0.04, -2.7 - i * 0.16);
+    sheet.renderOrder = 900 + i;
+    sheet.frustumCulled = false;
+    camera.add(sheet);
+    cinematicAtmosphere.rainSheets.push({
+      material,
+      speed: 0.72 + i * 0.34,
+      drift: (i - 1) * 0.035,
+      baseOpacity: material.opacity,
+    });
+  }
+}
+
+function createMovingWetHighlights() {
+  const texture = canvasTexture(768, 512, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, "rgba(45,244,237,0)");
+    grad.addColorStop(0.28, "rgba(45,244,237,0.13)");
+    grad.addColorStop(0.52, "rgba(255,238,188,0.2)");
+    grad.addColorStop(0.76, "rgba(255,47,109,0.13)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = "screen";
+    for (let i = 0; i < 170; i += 1) {
+      const y = rng() * h;
+      ctx.fillStyle = `rgba(255,255,255,${0.035 + rng() * 0.13})`;
+      ctx.fillRect(rng() * w, y, 28 + rng() * 160, 1 + rng() * 2.4);
+    }
+    for (let i = 0; i < 28; i += 1) {
+      ctx.strokeStyle = `rgba(159,247,255,${0.06 + rng() * 0.11})`;
+      ctx.lineWidth = 1 + rng() * 2;
+      ctx.beginPath();
+      const y = rng() * h;
+      ctx.moveTo(w * 0.08, y);
+      ctx.bezierCurveTo(w * 0.28, y - 30 + rng() * 60, w * 0.68, y - 40 + rng() * 80, w * 0.92, y + (rng() - 0.5) * 40);
+      ctx.stroke();
+    }
+  });
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1.0, 3.4);
+
+  const offsets = [-11.5, 2.5, 15.5];
+  for (let i = 0; i < offsets.length; i += 1) {
+    const layerTexture = texture.clone();
+    layerTexture.wrapS = THREE.RepeatWrapping;
+    layerTexture.wrapT = THREE.RepeatWrapping;
+    layerTexture.repeat.set(1.0 + i * 0.18, 3.4 + i * 0.8);
+    const material = new THREE.MeshBasicMaterial({
+      map: layerTexture,
+      transparent: true,
+      opacity: 0.14 + i * 0.035,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const highlight = new THREE.Mesh(
+      new THREE.PlaneGeometry(world.roadHalfWidth * (1.22 + i * 0.12), 18 + i * 4),
+      material,
+    );
+    highlight.rotation.x = -Math.PI / 2;
+    highlight.rotation.z = (i - 1) * 0.06;
+    highlight.position.set((i - 1) * 0.42, 0.052 + i * 0.004, player.group.position.z + offsets[i]);
+    highlight.renderOrder = 6 + i;
+    scene.add(highlight);
+    cinematicAtmosphere.wetHighlights.push({
+      mesh: highlight,
+      material,
+      offset: offsets[i],
+      speed: 0.34 + i * 0.18,
+      baseOpacity: material.opacity,
+      xBias: (i - 1) * 0.42,
+    });
+  }
+}
+
+function createNeonFlareTexture() {
+  return canvasTexture(512, 256, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    const core = ctx.createRadialGradient(w * 0.5, h * 0.5, 4, w * 0.5, h * 0.5, w * 0.34);
+    core.addColorStop(0, "rgba(255,255,255,0.92)");
+    core.addColorStop(0.16, "rgba(255,255,255,0.38)");
+    core.addColorStop(0.62, "rgba(255,255,255,0.08)");
+    core.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = core;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.globalCompositeOperation = "screen";
+    const horizontal = ctx.createLinearGradient(0, h / 2, w, h / 2);
+    horizontal.addColorStop(0, "rgba(255,255,255,0)");
+    horizontal.addColorStop(0.43, "rgba(255,255,255,0.25)");
+    horizontal.addColorStop(0.5, "rgba(255,255,255,0.66)");
+    horizontal.addColorStop(0.57, "rgba(255,255,255,0.25)");
+    horizontal.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = horizontal;
+    ctx.fillRect(0, h * 0.45, w, h * 0.1);
+    for (let i = 0; i < 7; i += 1) {
+      ctx.fillStyle = `rgba(255,255,255,${0.04 + rng() * 0.1})`;
+      ctx.fillRect(w * (0.18 + i * 0.09), h * (0.38 + rng() * 0.2), 20 + rng() * 58, 1 + rng() * 3);
+    }
+  });
+}
+
+function createNeonFlares() {
+  const texture = createNeonFlareTexture();
+  const flares = [
+    [-3.9, 3.7, 25.3, 0xff365d, 3.2, 1.25, 0.28],
+    [3.5, 4.25, 29.8, 0x2df4ed, 2.9, 1.1, 0.22],
+    [-2.1, 5.1, 36.8, 0xffd76d, 3.5, 1.18, 0.2],
+    [2.8, 3.15, 42.0, 0xff2f6d, 2.6, 0.98, 0.18],
+    [-3.3, 2.55, 47.5, 0x5cffb3, 2.2, 0.84, 0.16],
+  ];
+
+  for (const [x, y, z, color, sx, sy, opacity] of flares) {
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      color,
+      transparent: true,
+      opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const sprite = new THREE.Sprite(material);
+    sprite.position.set(x, y, z);
+    sprite.scale.set(sx, sy, 1);
+    sprite.renderOrder = 22;
+    scene.add(sprite);
+    cinematicAtmosphere.neonFlares.push({
+      sprite,
+      material,
+      baseOpacity: opacity,
+      baseScale: new THREE.Vector2(sx, sy),
+      phase: rng() * Math.PI * 2,
+      tempo: 1.2 + rng() * 1.7,
+    });
+  }
+}
+
+function createVolumetricLightShafts() {
+  const texture = canvasTexture(256, 1024, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    const center = ctx.createLinearGradient(0, 0, w, 0);
+    center.addColorStop(0, "rgba(255,255,255,0)");
+    center.addColorStop(0.36, "rgba(255,255,255,0.08)");
+    center.addColorStop(0.5, "rgba(255,255,255,0.26)");
+    center.addColorStop(0.64, "rgba(255,255,255,0.08)");
+    center.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = center;
+    ctx.fillRect(0, 0, w, h);
+    const vertical = ctx.createLinearGradient(0, 0, 0, h);
+    vertical.addColorStop(0, "rgba(0,0,0,0)");
+    vertical.addColorStop(0.16, "rgba(255,255,255,0.58)");
+    vertical.addColorStop(0.78, "rgba(255,255,255,0.16)");
+    vertical.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = vertical;
+    ctx.fillRect(0, 0, w, h);
+  });
+
+  const shafts = [
+    [-4.1, 3.3, 27.5, 3.6, 5.8, 0xff365d, -0.12, 0.12],
+    [3.85, 3.8, 34.0, 3.2, 6.4, 0x2df4ed, 0.1, 0.1],
+    [-2.6, 4.4, 42.5, 4.2, 7.2, 0xffd76d, 0.04, 0.09],
+    [2.9, 3.1, 49.0, 3.4, 5.9, 0xff2f6d, -0.08, 0.08],
+  ];
+
+  for (const [x, y, z, width, height, color, rot, opacity] of shafts) {
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      color,
+      transparent: true,
+      opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+    });
+    const shaft = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
+    shaft.position.set(x, y, z);
+    shaft.rotation.z = rot;
+    shaft.renderOrder = 4;
+    scene.add(shaft);
+    cinematicAtmosphere.lightShafts.push({
+      mesh: shaft,
+      material,
+      baseOpacity: opacity,
+      phase: rng() * Math.PI * 2,
+    });
+  }
 }
 
 function createBuildings(side) {
@@ -3911,6 +4169,7 @@ function createPlayer() {
     comboTimer: 0,
     hitPulse: 0,
     afterimageTimer: 0,
+    splashTimer: 0,
   };
 }
 
@@ -4096,6 +4355,7 @@ function resetGame() {
   player.dashTimer = 0;
   player.dashCooldown = 0;
   player.invulnerable = 0;
+  player.splashTimer = 0;
   input.jumpQueued = false;
   cameraRig.shake = 0;
   cameraRig.shakePower = 0;
@@ -4124,6 +4384,7 @@ function animate() {
   updateGeneratedSceneMotion(dt);
   updateAnimatedActors(dt);
   updateStreetLife(dt);
+  updateCinematicAtmosphere(dt);
   updateRain(dt);
   updateFloatingText(dt);
   updateSparks(dt);
@@ -4197,6 +4458,7 @@ function updatePlayer(dt) {
     displacement.addScaledVector(desired, speed * dt);
   }
 
+  player.velocity.copy(displacement).multiplyScalar(1 / Math.max(dt, 0.001));
   player.group.position.add(displacement);
   player.group.position.x = clamp(player.group.position.x, -world.sideLimitX, world.sideLimitX);
   player.group.position.z = clamp(player.group.position.z, world.streetMinZ, world.streetMaxZ);
@@ -4215,8 +4477,23 @@ function updatePlayer(dt) {
   }
   player.contactShadow.position.y = 0.038 - player.group.position.y;
   player.contactShadow.material.opacity = player.grounded ? 1 : clamp(0.68 - player.group.position.y * 0.18, 0.28, 0.68);
-
   const strideSpeed = input.sprint ? 14 : 10;
+  player.splashTimer = Math.max(0, player.splashTimer - dt);
+  if (moving && player.grounded && !player.attack && player.splashTimer <= 0) {
+    const footSide = Math.sin(elapsed * strideSpeed) > 0 ? 1 : -1;
+    const footPos = player.group.position.clone()
+      .addScaledVector(rightV, footSide * 0.22)
+      .addScaledVector(player.moveDir, -0.14);
+    spawnSkillEffect("puddleTrail", footPos, player.yaw, {
+      duration: input.sprint ? 0.2 : 0.16,
+      radius: input.sprint ? 0.48 : 0.34,
+      colorA: 0x2df4ed,
+      colorB: 0xffd76d,
+      waterColor: 0x9fd7ff,
+    });
+    player.splashTimer = input.sprint ? 0.11 : 0.18;
+  }
+
   const stride = moving ? Math.sin(elapsed * strideSpeed) : 0;
   const bob = moving ? Math.abs(stride) * 0.035 : Math.sin(elapsed * 2) * 0.01;
   player.model.position.y = bob;
@@ -4410,6 +4687,7 @@ function triggerAttack(type) {
     angle: heavy ? 2.65 : 2.24,
     knockback: heavy ? 7.3 : 4.2,
     targets: new Set(),
+    trailTimer: 0,
   };
   reticle.classList.add("active");
 }
@@ -4452,6 +4730,7 @@ function updateCombat(dt) {
 
   const attack = player.attack;
   attack.t += dt;
+  attack.trailTimer = Math.max(0, attack.trailTimer - dt);
   const progress = clamp(attack.t / attack.duration, 0, 1);
   const swing = Math.sin(progress * Math.PI);
   const strike = smoothstep01((progress - (attack.type === "heavy" ? 0.14 : 0.09)) / (attack.type === "heavy" ? 0.46 : 0.36));
@@ -4487,6 +4766,18 @@ function updateCombat(dt) {
   slash.mesh.rotation.set(0, player.yaw, 0);
   slash.mesh.scale.setScalar(attack.type === "heavy" ? 1.22 : 1.0);
   slash.material.opacity = attack.t >= attack.hitStart && attack.t <= attack.hitEnd ? 0.78 : 0.28 * swing;
+
+  if (attack.t >= attack.hitStart * 0.72 && attack.t <= attack.hitEnd + 0.06 && attack.trailTimer <= 0) {
+    const wakePos = player.group.position.clone().addScaledVector(forward, attack.type === "heavy" ? 1.08 : 0.92);
+    spawnSkillEffect("bladeWake", wakePos, player.yaw, {
+      duration: attack.type === "heavy" ? 0.22 : 0.16,
+      colorA: attack.type === "heavy" ? 0xffd76d : 0x2df4ed,
+      colorB: attack.type === "heavy" ? 0xff2f6d : 0xffd76d,
+      waterColor: 0x9fd7ff,
+      heavy: attack.type === "heavy",
+    });
+    attack.trailTimer = attack.type === "heavy" ? 0.065 : 0.052;
+  }
 
   if (attack.t >= attack.hitStart && attack.t <= attack.hitEnd) {
     checkPlayerHits(attack, forward);
@@ -5027,12 +5318,14 @@ function damageEnemy(enemy, amount, dir, knockback) {
 
   createFloatingText(`-${Math.round(amount)}`, enemy.group.position, amount > 40 ? "#ffeb9a" : "#f9fafa");
   addSparkBurst(enemy.group.position.clone().add(new THREE.Vector3(0, 1.25, 0)), amount > 40 ? 0xffdd7c : 0x8afcff, amount > 40 ? 18 : 10, 2.2);
+  spawnImpactBloom(enemy.group.position, amount > 40 ? 0xffd76d : 0x8afcff, amount > 40 ? 1.28 : 0.92);
 
   if (enemy.health <= 0) {
     enemy.dead = true;
     enemy.deathTimer = 0.72;
     createFloatingText("K.O.", enemy.group.position, "#ffeb9a");
     addSparkBurst(enemy.group.position.clone().add(new THREE.Vector3(0, 1.1, 0)), 0xff365d, 24, 3.0);
+    spawnImpactBloom(enemy.group.position, 0xff365d, 1.55);
   }
 }
 
@@ -5044,6 +5337,7 @@ function damagePlayer(amount, dir) {
   vignetteTimer = 0.32;
   setStatus("裝甲受損", true, 0.9);
   addSparkBurst(player.group.position.clone().add(new THREE.Vector3(0, 1.15, 0)), 0xff365d, 14, 2.2);
+  spawnImpactBloom(player.group.position, 0xff365d, 1.06);
   if (player.health <= 0) endGame();
 }
 
@@ -5145,6 +5439,42 @@ function updateStreetLife(dt) {
     } else if (vehicle.speed < 0 && vehicle.group.position.z < vehicle.minZ) {
       vehicle.group.position.z = vehicle.maxZ;
     }
+  }
+}
+
+function updateCinematicAtmosphere(dt) {
+  const sprintBoost = input.sprint && player.velocity.lengthSq() > 0.05 ? 0.08 : 0;
+  const combatBoost = (player.attack ? 0.08 : 0) + (player.skill ? 0.12 : 0);
+  for (const sheet of cinematicAtmosphere.rainSheets) {
+    const texture = sheet.material.map;
+    texture.offset.y -= dt * sheet.speed;
+    texture.offset.x += dt * sheet.drift + Math.sin(elapsed * 0.9) * dt * 0.012;
+    sheet.material.opacity = sheet.baseOpacity + sprintBoost + combatBoost * 0.55;
+  }
+
+  for (const highlight of cinematicAtmosphere.wetHighlights) {
+    const texture = highlight.material.map;
+    texture.offset.y -= dt * highlight.speed;
+    texture.offset.x = Math.sin(elapsed * 0.45 + highlight.offset) * 0.018;
+    const targetZ = clamp(player.group.position.z + highlight.offset, world.streetMinZ + 8, world.streetMaxZ - 8);
+    highlight.mesh.position.z = damp(highlight.mesh.position.z, targetZ, 2.8, dt);
+    highlight.mesh.position.x = damp(highlight.mesh.position.x, player.group.position.x * 0.22 + highlight.xBias, 3.4, dt);
+    highlight.material.opacity = highlight.baseOpacity + combatBoost + (input.sprint ? 0.06 : 0);
+  }
+
+  for (const flare of cinematicAtmosphere.neonFlares) {
+    const pulse = 0.86 + Math.sin(elapsed * flare.tempo + flare.phase) * 0.14;
+    const twitch = Math.sin(elapsed * 21.0 + flare.phase) > 0.972 ? 1.8 : 1;
+    const distance = Math.max(4, camera.position.distanceTo(flare.sprite.position));
+    const proximity = clamp(18 / distance, 0.55, 1.22);
+    flare.material.opacity = flare.baseOpacity * pulse * twitch * proximity;
+    flare.sprite.scale.set(flare.baseScale.x * proximity * pulse, flare.baseScale.y * proximity * pulse, 1);
+  }
+
+  for (const shaft of cinematicAtmosphere.lightShafts) {
+    shaft.mesh.lookAt(camera.position.x, shaft.mesh.position.y, camera.position.z);
+    const pulse = 0.84 + Math.sin(elapsed * 1.35 + shaft.phase) * 0.16;
+    shaft.material.opacity = shaft.baseOpacity * pulse;
   }
 }
 
@@ -5336,13 +5666,101 @@ function addSparkBurst(position, color, count, speed) {
   }
 }
 
+function getImpactFlashTexture() {
+  if (impactFlashTexture) return impactFlashTexture;
+  impactFlashTexture = canvasTexture(512, 256, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    ctx.globalCompositeOperation = "screen";
+    const core = ctx.createRadialGradient(w * 0.5, h * 0.5, 2, w * 0.5, h * 0.5, w * 0.28);
+    core.addColorStop(0, "rgba(255,255,255,0.96)");
+    core.addColorStop(0.18, "rgba(255,255,255,0.58)");
+    core.addColorStop(0.58, "rgba(255,255,255,0.13)");
+    core.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = core;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.lineCap = "round";
+    ctx.shadowColor = "rgba(255,255,255,0.9)";
+    ctx.shadowBlur = 18;
+    for (let i = 0; i < 9; i += 1) {
+      const angle = (i / 9) * Math.PI * 2 + rng() * 0.12;
+      const length = w * (0.12 + rng() * 0.24);
+      ctx.strokeStyle = `rgba(255,255,255,${0.2 + rng() * 0.44})`;
+      ctx.lineWidth = 2 + rng() * 5;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.5 + Math.cos(angle) * 16, h * 0.5 + Math.sin(angle) * 8);
+      ctx.lineTo(w * 0.5 + Math.cos(angle) * length, h * 0.5 + Math.sin(angle) * length * 0.34);
+      ctx.stroke();
+    }
+
+    const streak = ctx.createLinearGradient(0, h * 0.5, w, h * 0.5);
+    streak.addColorStop(0, "rgba(255,255,255,0)");
+    streak.addColorStop(0.46, "rgba(255,255,255,0.32)");
+    streak.addColorStop(0.5, "rgba(255,255,255,0.82)");
+    streak.addColorStop(0.54, "rgba(255,255,255,0.32)");
+    streak.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = streak;
+    ctx.fillRect(0, h * 0.47, w, h * 0.06);
+  });
+  return impactFlashTexture;
+}
+
+function spawnImpactBloom(position, color, strength = 1) {
+  const group = new THREE.Group();
+  group.position.copy(position);
+  group.position.y = Math.max(0.055, position.y + 0.04);
+
+  const ripple = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.25 * strength, 0.54 * strength),
+    createSkillMaterial({ map: createPuddleRippleTexture(0x9fd7ff, color), opacity: 0.34 }),
+  );
+  ripple.rotation.x = -Math.PI / 2;
+  ripple.rotation.z = rng() * Math.PI;
+  group.add(ripple);
+
+  const flash = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: getImpactFlashTexture(),
+      color,
+      transparent: true,
+      opacity: 0.84,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    }),
+  );
+  flash.position.y = 1.1 * strength;
+  flash.scale.set(1.15 * strength, 0.48 * strength, 1);
+  group.add(flash);
+
+  addRainSpray(group, 0x9fd7ff, color, Math.floor(10 + strength * 10), 0.9 * strength);
+  tagSkillMaterials(group);
+  scene.add(group);
+  skillEffects.push({
+    group,
+    kind: "impactBloom",
+    life: 0.22 + strength * 0.04,
+    maxLife: 0.22 + strength * 0.04,
+    endScale: 1.36 + strength * 0.18,
+  });
+}
+
 function rgbaStyle(color, alpha) {
   const c = color?.isColor ? color : new THREE.Color(color);
   return `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${alpha})`;
 }
 
+function colorCacheKey(color) {
+  const c = color?.isColor ? color : new THREE.Color(color);
+  return c.getHexString();
+}
+
 function createSkillStreakTexture(colorA, colorB, variant = "dash") {
-  return canvasTexture(768, 256, (ctx, w, h) => {
+  const cacheKey = `streak:${colorCacheKey(colorA)}:${colorCacheKey(colorB)}:${variant}`;
+  const cached = effectTextureCache.get(cacheKey);
+  if (cached) return cached;
+
+  const texture = canvasTexture(768, 256, (ctx, w, h) => {
     ctx.clearRect(0, 0, w, h);
     const grad = ctx.createLinearGradient(0, h / 2, w, h / 2);
     grad.addColorStop(0, "rgba(0,0,0,0)");
@@ -5379,10 +5797,16 @@ function createSkillStreakTexture(colorA, colorB, variant = "dash") {
     ctx.lineTo(w * 0.82, h * 0.47);
     ctx.stroke();
   });
+  effectTextureCache.set(cacheKey, texture);
+  return texture;
 }
 
 function createPuddleRippleTexture(colorA, colorB) {
-  return canvasTexture(512, 512, (ctx, w, h) => {
+  const cacheKey = `ripple:${colorCacheKey(colorA)}:${colorCacheKey(colorB)}`;
+  const cached = effectTextureCache.get(cacheKey);
+  if (cached) return cached;
+
+  const texture = canvasTexture(512, 512, (ctx, w, h) => {
     ctx.clearRect(0, 0, w, h);
     const grad = ctx.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w * 0.48);
     grad.addColorStop(0, rgbaStyle(colorA, 0.2));
@@ -5407,10 +5831,16 @@ function createPuddleRippleTexture(colorA, colorB) {
       ctx.stroke();
     }
   });
+  effectTextureCache.set(cacheKey, texture);
+  return texture;
 }
 
 function createNeonPanelTexture(colorA, colorB) {
-  return canvasTexture(256, 128, (ctx, w, h) => {
+  const cacheKey = `panel:${colorCacheKey(colorA)}:${colorCacheKey(colorB)}`;
+  const cached = effectTextureCache.get(cacheKey);
+  if (cached) return cached;
+
+  const texture = canvasTexture(256, 128, (ctx, w, h) => {
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = "rgba(5,9,12,0.72)";
     ctx.fillRect(0, 0, w, h);
@@ -5431,6 +5861,8 @@ function createNeonPanelTexture(colorA, colorB) {
       ctx.stroke();
     }
   });
+  effectTextureCache.set(cacheKey, texture);
+  return texture;
 }
 
 function addSkillPlane(group, width, height, material, position, rotation = null) {
@@ -5513,7 +5945,29 @@ function spawnSkillEffect(kind, position, yaw, options = {}) {
   const duration = options.duration ?? 0.5;
   let endScale = 1.8;
 
-  if (visualKind === "alleyDash") {
+  if (visualKind === "bladeWake") {
+    const blade = new THREE.Mesh(
+      new THREE.PlaneGeometry(options.heavy ? 3.35 : 2.65, options.heavy ? 1.16 : 0.88),
+      createSkillMaterial({
+        map: createSkillStreakTexture(colorA, colorB, options.heavy ? "ring" : "dash"),
+        opacity: options.heavy ? 0.66 : 0.52,
+      }),
+    );
+    blade.position.set(0, options.heavy ? 1.22 : 1.08, options.heavy ? 0.45 : 0.28);
+    blade.rotation.z = options.heavy ? -0.18 : 0.12;
+    group.add(blade);
+
+    addSkillPlane(
+      group,
+      options.heavy ? 2.05 : 1.45,
+      options.heavy ? 0.76 : 0.52,
+      createSkillMaterial({ map: createPuddleRippleTexture(waterColor, colorA), opacity: options.heavy ? 0.3 : 0.22 }),
+      [0, 0.018, -0.18],
+      [-Math.PI / 2, 0, rng() * Math.PI],
+    );
+    addRainSpray(group, waterColor, colorB, options.heavy ? 16 : 10, options.heavy ? 1.65 : 1.1);
+    endScale = options.heavy ? 1.22 : 1.12;
+  } else if (visualKind === "alleyDash") {
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(1.55, 5.8),
       createSkillMaterial({ map: createSkillStreakTexture(colorA, colorB, "alley"), opacity: 0.76 }),

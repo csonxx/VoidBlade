@@ -47,33 +47,32 @@ body {
 
 #app::before {
   background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.022) 0,
-      rgba(255, 255, 255, 0.022) 1px,
-      transparent 1px,
-      transparent 5px
-    ),
-    linear-gradient(90deg, rgba(45, 244, 237, 0.08), transparent 24%, transparent 76%, rgba(255, 47, 109, 0.08));
-  mix-blend-mode: screen;
-  opacity: 0.46;
-  filter: contrast(1.1) saturate(1.15);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.38) 0 7%, transparent 16% 84%, rgba(0, 0, 0, 0.42) 94% 100%),
+    radial-gradient(ellipse at 50% 53%, transparent 38%, rgba(0, 0, 0, 0.18) 72%, rgba(0, 0, 0, 0.56) 100%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0, rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 4px);
+  mix-blend-mode: normal;
+  opacity: 0.92;
+  filter: contrast(1.08) saturate(1.12);
 }
 
 #app::after {
   background:
-    radial-gradient(circle at 17% 18%, rgba(45, 244, 237, 0.16), transparent 18%),
-    radial-gradient(circle at 81% 12%, rgba(255, 47, 109, 0.12), transparent 16%),
-    linear-gradient(122deg, transparent 0 42%, rgba(45, 244, 237, 0.12) 42.3%, transparent 43% 100%),
-    linear-gradient(54deg, transparent 0 63%, rgba(255, 224, 114, 0.12) 63.2%, transparent 64% 100%);
-  opacity: 0.36;
-  animation: electric-drift 3.2s steps(2, end) infinite;
+    linear-gradient(90deg, rgba(45, 244, 237, 0.11), transparent 18%, transparent 82%, rgba(255, 47, 109, 0.11)),
+    linear-gradient(116deg, transparent 0 38%, rgba(45, 244, 237, 0.12) 38.24%, transparent 39% 100%),
+    linear-gradient(62deg, transparent 0 61%, rgba(255, 224, 114, 0.11) 61.24%, transparent 62% 100%),
+    repeating-linear-gradient(115deg, transparent 0 38px, rgba(255, 255, 255, 0.022) 38px 39px, transparent 39px 84px);
+  mix-blend-mode: screen;
+  opacity: 0.4;
+  animation:
+    electric-drift 3.2s steps(2, end) infinite,
+    lens-jitter 9s linear infinite;
 }
 
 #game-canvas {
   display: block;
   width: 100%;
   height: 100%;
+  filter: saturate(1.14) contrast(1.08) brightness(0.96);
   outline: none;
 }
 
@@ -639,6 +638,25 @@ body {
   }
   72% {
     opacity: 0.62;
+  }
+}
+
+@keyframes lens-jitter {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  28% {
+    transform: translate3d(0.4px, -0.3px, 0);
+  }
+  29% {
+    transform: translate3d(-0.6px, 0.2px, 0);
+  }
+  62% {
+    transform: translate3d(0.2px, 0.4px, 0);
+  }
+  63% {
+    transform: translate3d(-0.3px, -0.2px, 0);
   }
 }
 
