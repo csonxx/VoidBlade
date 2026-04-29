@@ -268,6 +268,10 @@ const enemyWavePalettes = [
     speedMultiplier: 1.02,
     healthMultiplier: 0.96,
     rigHeight: 1.95,
+    style: "floralBrawler",
+    pattern: "floral",
+    hairColor: 0x14100e,
+    weaponType: "baton",
   },
   {
     name: "綠緞面車手",
@@ -301,6 +305,10 @@ const enemyWavePalettes = [
     healthMultiplier: 0.84,
     visualScale: 0.96,
     rigHeight: 1.86,
+    style: "greenBomber",
+    pattern: "bomber",
+    hairColor: 0x12100c,
+    weaponType: "baton",
   },
   {
     name: "紫皮衣刀手",
@@ -333,6 +341,10 @@ const enemyWavePalettes = [
     speedMultiplier: 1.1,
     healthMultiplier: 0.92,
     rigHeight: 1.92,
+    style: "purpleKnife",
+    pattern: "leather",
+    hairColor: 0x5d258b,
+    weaponType: "knife",
   },
   {
     name: "白西裝狠人",
@@ -366,6 +378,10 @@ const enemyWavePalettes = [
     healthMultiplier: 1.22,
     visualScale: 1.04,
     rigHeight: 2.02,
+    style: "whiteSuit",
+    pattern: "plain",
+    hairColor: 0x111111,
+    weaponType: "cane",
   },
   {
     name: "豹紋背心惡漢",
@@ -399,6 +415,10 @@ const enemyWavePalettes = [
     healthMultiplier: 1.14,
     visualScale: 1.05,
     rigHeight: 1.98,
+    style: "leopardBruiser",
+    pattern: "leopard",
+    hairColor: 0x1a120c,
+    weaponType: "baton",
   },
   {
     name: "牛仔背心拳手",
@@ -431,6 +451,10 @@ const enemyWavePalettes = [
     speedMultiplier: 1.08,
     healthMultiplier: 1.0,
     rigHeight: 1.94,
+    style: "denimFighter",
+    pattern: "denim",
+    hairColor: 0x17130f,
+    weaponType: "fists",
   },
   {
     name: "金繡堂主",
@@ -465,6 +489,10 @@ const enemyWavePalettes = [
     healthMultiplier: 1.38,
     visualScale: 1.1,
     rigHeight: 2.12,
+    style: "goldBoss",
+    pattern: "embroidered",
+    hairColor: 0x10100e,
+    weaponType: "cane",
   },
   {
     name: "長髮牛仔龍頭",
@@ -498,6 +526,10 @@ const enemyWavePalettes = [
     healthMultiplier: 0.82,
     visualScale: 0.96,
     rigHeight: 1.86,
+    style: "denimLeader",
+    pattern: "denim",
+    hairColor: 0x17120e,
+    weaponType: "baton",
   },
   {
     name: "灰橙工地重裝",
@@ -531,6 +563,10 @@ const enemyWavePalettes = [
     healthMultiplier: 1.32,
     visualScale: 1.14,
     rigHeight: 2.08,
+    style: "constructionHeavy",
+    pattern: "workwear",
+    hairColor: 0x17110d,
+    weaponType: "hammer",
   },
   {
     name: "粉色夜場新人",
@@ -564,6 +600,10 @@ const enemyWavePalettes = [
     healthMultiplier: 0.88,
     visualScale: 0.94,
     rigHeight: 1.84,
+    style: "pinkBomber",
+    pattern: "bomber",
+    hairColor: 0xff4da6,
+    weaponType: "baton",
   },
 ];
 
@@ -843,6 +883,87 @@ function actorCharacterTexture(panel) {
     return atlasTexture(panel.rect, generatedAssets.waveCharacter);
   }
   return cinematicCharacterTexture(panel);
+}
+
+function streetPatternTexture(kind, baseHex, accentHex, secondaryHex) {
+  const base = new THREE.Color(baseHex ?? 0x222222);
+  const accent = new THREE.Color(accentHex ?? 0xffffff);
+  const secondary = new THREE.Color(secondaryHex ?? 0xffd76d);
+  return canvasTexture(512, 512, (ctx, w, h) => {
+    ctx.fillStyle = rgbaStyle(base, 1);
+    ctx.fillRect(0, 0, w, h);
+
+    if (kind === "floral") {
+      for (let i = 0; i < 34; i += 1) {
+        const x = rng() * w;
+        const y = rng() * h;
+        const r = 14 + rng() * 18;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rng() * Math.PI);
+        ctx.fillStyle = i % 2 ? rgbaStyle(accent, 0.88) : rgbaStyle(secondary, 0.88);
+        for (let p = 0; p < 5; p += 1) {
+          ctx.rotate((Math.PI * 2) / 5);
+          ctx.beginPath();
+          ctx.ellipse(r * 0.48, 0, r * 0.38, r * 0.18, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = "rgba(255,245,205,0.78)";
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    } else if (kind === "leopard") {
+      ctx.fillStyle = rgbaStyle(secondary, 0.22);
+      ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 90; i += 1) {
+        const x = rng() * w;
+        const y = rng() * h;
+        const rx = 9 + rng() * 16;
+        const ry = 6 + rng() * 13;
+        ctx.strokeStyle = "rgba(24,13,5,0.86)";
+        ctx.lineWidth = 3 + rng() * 2;
+        ctx.beginPath();
+        ctx.ellipse(x, y, rx, ry, rng() * Math.PI, rng() * 0.8, Math.PI * (1.2 + rng() * 0.6));
+        ctx.stroke();
+        ctx.fillStyle = rgbaStyle(accent, 0.28);
+        ctx.beginPath();
+        ctx.ellipse(x, y, rx * 0.52, ry * 0.5, rng() * Math.PI, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (kind === "denim") {
+      ctx.fillStyle = rgbaStyle(base, 1);
+      ctx.fillRect(0, 0, w, h);
+      for (let y = 0; y < h; y += 4) {
+        ctx.fillStyle = y % 8 ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.12)";
+        ctx.fillRect(0, y, w, 2);
+      }
+      for (let x = 0; x < w; x += 17) {
+        ctx.fillStyle = "rgba(255,255,255,0.06)";
+        ctx.fillRect(x, 0, 2, h);
+      }
+    } else if (kind === "embroidered") {
+      for (let i = 0; i < 18; i += 1) {
+        const y = 28 + i * 26;
+        ctx.strokeStyle = rgbaStyle(accent, 0.6);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(30, y);
+        ctx.bezierCurveTo(150, y - 35, 260, y + 35, 390, y - 8);
+        ctx.stroke();
+      }
+      ctx.fillStyle = rgbaStyle(secondary, 0.22);
+      for (let i = 0; i < 70; i += 1) {
+        ctx.fillRect(rng() * w, rng() * h, 2 + rng() * 12, 1 + rng() * 3);
+      }
+    } else {
+      for (let i = 0; i < 220; i += 1) {
+        ctx.fillStyle = i % 2 ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.14)";
+        ctx.fillRect(rng() * w, rng() * h, 1 + rng() * 16, 1 + rng() * 3);
+      }
+    }
+  });
 }
 
 function closeStreetTexture(panel) {
@@ -2856,6 +2977,42 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
   }
 
   if (role === "enemy") {
+    const style = palette.style ?? "street";
+    if (palette.pattern && palette.pattern !== "plain") {
+      coat.map = streetPatternTexture(palette.pattern, palette.coatColor, palette.accent, palette.secondaryAccent);
+      coat.opacity = style === "floralBrawler" || style === "leopardBruiser" ? 0.96 : 0.9;
+      coat.needsUpdate = true;
+    }
+    if (style === "denimLeader" || style === "denimFighter") {
+      deepCoat.map = streetPatternTexture("denim", palette.deepCoatColor, palette.accent, palette.secondaryAccent);
+      deepCoat.needsUpdate = true;
+    }
+    const hair = new THREE.MeshStandardMaterial({
+      color: palette.hairColor ?? 0x14100e,
+      roughness: 0.52,
+      metalness: 0.06,
+      envMapIntensity: 0.55,
+    });
+    const tape = new THREE.MeshStandardMaterial({
+      color: 0xf2efe3,
+      roughness: 0.72,
+      metalness: 0.04,
+      envMapIntensity: 0.62,
+    });
+    const lapelMaterial = style === "whiteSuit" ? deepCoat : decals;
+
+    add(new THREE.SphereGeometry(0.24, 18, 9, 0, Math.PI * 2, 0, Math.PI * 0.52), hair, [0, 1.99, -0.015], [0.02, 0, 0]);
+    if (style === "denimLeader") {
+      add(roundedBox(0.14, 0.58, 0.065, 0.03), hair, [-0.23, 1.75, -0.04], [0.1, 0, 0.18], { sway: true });
+      add(roundedBox(0.14, 0.58, 0.065, 0.03), hair, [0.23, 1.75, -0.04], [0.1, 0, -0.18], { sway: true });
+      add(roundedBox(0.24, 0.52, 0.06, 0.03), hair, [0, 1.7, -0.18], [0.12, 0, 0], { sway: true });
+    } else if (style === "purpleKnife" || style === "pinkBomber") {
+      for (let i = -2; i <= 2; i += 1) {
+        const spike = add(new THREE.ConeGeometry(0.045, 0.22, 6), hair, [i * 0.055, 2.16 + Math.abs(i) * 0.012, 0.03], [0.42 - Math.abs(i) * 0.08, 0, i * -0.16]);
+        spike.castShadow = true;
+      }
+    }
+
     add(roundedBox(0.34, 0.085, 0.06, 0.026), rubber, [0, 1.91, 0.25]);
     add(roundedBox(0.18, 0.055, 0.045, 0.018), decals, [-0.21, 1.88, 0.24]);
     add(roundedBox(0.18, 0.055, 0.045, 0.018), decals, [0.21, 1.88, 0.24]);
@@ -2864,8 +3021,21 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     add(roundedBox(0.24, 0.66, 0.055, 0.035), coat, [-0.23, 1.21, 0.45], [-0.08, 0.05, 0.11], { sway: true });
     add(roundedBox(0.24, 0.66, 0.055, 0.035), coat, [0.23, 1.21, 0.45], [-0.08, -0.05, -0.11], { sway: true });
     add(roundedBox(0.5, 0.74, 0.055, 0.04), coat, [0, 1.13, -0.36], [0.1, 0, 0], { sway: true });
-    add(roundedBox(0.13, 0.52, 0.045, 0.018), decals, [-0.11, 1.23, 0.49], [-0.08, 0, -0.08]);
-    add(roundedBox(0.13, 0.52, 0.045, 0.018), decals, [0.12, 1.2, 0.49], [-0.08, 0, 0.08]);
+    add(roundedBox(0.13, 0.52, 0.045, 0.018), lapelMaterial, [-0.11, 1.23, 0.49], [-0.08, 0, -0.08]);
+    add(roundedBox(0.13, 0.52, 0.045, 0.018), lapelMaterial, [0.12, 1.2, 0.49], [-0.08, 0, 0.08]);
+    if (style === "whiteSuit") {
+      add(roundedBox(0.18, 0.5, 0.052, 0.02), deepCoat, [-0.18, 1.2, 0.52], [-0.08, 0, -0.22]);
+      add(roundedBox(0.18, 0.5, 0.052, 0.02), deepCoat, [0.18, 1.2, 0.52], [-0.08, 0, 0.22]);
+    }
+    if (style === "greenBomber" || style === "pinkBomber") {
+      addMirrored(roundedBox(0.055, 0.48, 0.045, 0.017), decals, 0.57, 1.14, 0.28, [0.14, 0, 0.1]);
+      add(roundedBox(0.46, 0.06, 0.045, 0.017), decals, [0, 1.55, 0.51], [-0.08, 0, 0]);
+    }
+    if (style === "constructionHeavy") {
+      add(roundedBox(0.07, 0.78, 0.055, 0.022), decals, [-0.19, 1.14, 0.52], [-0.08, 0, -0.18]);
+      add(roundedBox(0.07, 0.78, 0.055, 0.022), decals, [0.19, 1.14, 0.52], [-0.08, 0, 0.18]);
+      add(roundedBox(0.64, 0.06, 0.052, 0.018), decals, [0, 0.92, 0.5], [-0.04, 0, 0]);
+    }
 
     const neckChain = new THREE.Mesh(
       new THREE.TorusGeometry(0.19, 0.012, 8, 48, Math.PI * 1.25),
@@ -2898,21 +3068,57 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     addMirrored(roundedBox(0.12, 0.38, 0.09, 0.035), harness, 0.61, 1.1, 0.18, [0.14, 0, 0.14]);
     addMirrored(roundedBox(0.16, 0.12, 0.18, 0.035), rubber, 0.66, 0.82, 0.18, [0.05, 0, 0.08]);
     addMirrored(roundedBox(0.06, 0.38, 0.055, 0.018), decals, 0.62, 1.07, 0.24, [0.12, 0, 0.12]);
+    if (style === "denimFighter") {
+      addMirrored(roundedBox(0.18, 0.13, 0.052, 0.016), tape, 0.62, 1.0, 0.27, [0.12, 0, 0.12]);
+      addMirrored(roundedBox(0.18, 0.13, 0.052, 0.016), tape, 0.65, 0.86, 0.22, [0.12, 0, 0.12]);
+      add(roundedBox(0.14, 0.42, 0.04, 0.016), tape, [-0.14, 1.23, 0.54], [-0.08, 0, -0.07]);
+      add(roundedBox(0.14, 0.42, 0.04, 0.016), tape, [0.14, 1.23, 0.54], [-0.08, 0, 0.07]);
+    }
 
     addMirrored(roundedBox(0.14, 0.42, 0.08, 0.035), deepCoat, 0.2, 0.48, 0.16, [0.04, 0, 0.04]);
     addMirrored(roundedBox(0.23, 0.15, 0.42, 0.055), rubber, 0.2, 0.14, 0.18, [0, 0, 0.02]);
     add(roundedBox(0.76, 0.08, 0.085, 0.028), harness, [0, 0.84, 0.42], [-0.04, 0, 0]);
 
     const weapon = new THREE.Group();
-    const baton = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.96, 12), metal);
-    baton.rotation.x = Math.PI / 2;
-    weapon.add(baton);
-    const grip = new THREE.Mesh(roundedBox(0.12, 0.08, 0.12, 0.03), rubber);
-    grip.position.z = -0.34;
-    weapon.add(grip);
-    const tip = new THREE.Mesh(roundedBox(0.11, 0.11, 0.08, 0.03), decals);
-    tip.position.z = 0.48;
-    weapon.add(tip);
+    if (palette.weaponType === "knife") {
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.28, 10), rubber);
+      handle.rotation.x = Math.PI / 2;
+      weapon.add(handle);
+      const blade = new THREE.Mesh(roundedBox(0.045, 0.055, 0.54, 0.012), bladeKit);
+      blade.position.z = 0.36;
+      weapon.add(blade);
+    } else if (palette.weaponType === "cane") {
+      const cane = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 1.28, 12), metal);
+      cane.rotation.x = Math.PI / 2;
+      weapon.add(cane);
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 10), decals);
+      knob.position.z = 0.64;
+      weapon.add(knob);
+    } else if (palette.weaponType === "hammer") {
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.04, 0.92, 12), rubber);
+      handle.rotation.x = Math.PI / 2;
+      weapon.add(handle);
+      const head = new THREE.Mesh(roundedBox(0.34, 0.16, 0.18, 0.035), metal);
+      head.position.z = 0.47;
+      weapon.add(head);
+    } else if (palette.weaponType === "fists") {
+      const wrapL = new THREE.Mesh(roundedBox(0.16, 0.12, 0.16, 0.035), tape);
+      wrapL.position.set(-0.05, 0, 0);
+      weapon.add(wrapL);
+      const wrapR = new THREE.Mesh(roundedBox(0.16, 0.12, 0.16, 0.035), tape);
+      wrapR.position.set(0.12, 0.02, 0.1);
+      weapon.add(wrapR);
+    } else {
+      const baton = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.96, 12), metal);
+      baton.rotation.x = Math.PI / 2;
+      weapon.add(baton);
+      const grip = new THREE.Mesh(roundedBox(0.12, 0.08, 0.12, 0.03), rubber);
+      grip.position.z = -0.34;
+      weapon.add(grip);
+      const tip = new THREE.Mesh(roundedBox(0.11, 0.11, 0.08, 0.03), decals);
+      tip.position.z = 0.48;
+      weapon.add(tip);
+    }
     weapon.position.set(-0.5, 0.96, 0.2);
     weapon.rotation.set(-0.12, 0.2, -0.18);
     weapon.userData.basePosition = weapon.position.clone();
@@ -4728,7 +4934,7 @@ function addSparkBurst(position, color, count, speed) {
 }
 
 function rgbaStyle(color, alpha) {
-  const c = new THREE.Color(color);
+  const c = color?.isColor ? color : new THREE.Color(color);
   return `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${alpha})`;
 }
 
