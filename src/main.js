@@ -3,6 +3,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import characterCinematicAtlasUrl from "./assets/character-cinematic-atlas.png";
+import characterIdentityAtlasUrl from "./assets/character-identity-atlas.png";
 import characterMaterialAtlasUrl from "./assets/character-material-atlas.png";
 import characterRosterVividUrl from "./assets/character-roster-hk-vivid-10.png";
 import characterWaveAtlasUrl from "./assets/character-wave-atlas-v2.png";
@@ -121,6 +122,10 @@ function waveAtlasCell(col, row, pad = 0.0075) {
   return { atlas: "waveCharacter", rect: atlasGridCell(col, row, pad) };
 }
 
+function identityAtlasCell(col, row, pad = 0.008) {
+  return { atlas: "identityCharacter", rect: atlasGridCell(col, row, pad) };
+}
+
 const atlasPanels = {
   wetRoad: [0.0, 0.0, 0.435, 0.36],
   sidewalk: [0.0, 0.36, 0.435, 0.12],
@@ -207,6 +212,25 @@ const characterWavePanels = {
   greenArmor: waveAtlasCell(3, 3),
 };
 
+const characterIdentityPanels = {
+  skinWarm: identityAtlasCell(0, 0),
+  skinWeathered: identityAtlasCell(1, 0),
+  skinStubble: identityAtlasCell(2, 0),
+  scalpShaved: identityAtlasCell(3, 0),
+  hairSlick: identityAtlasCell(0, 1),
+  hairLong: identityAtlasCell(1, 1),
+  hairBlond: identityAtlasCell(2, 1),
+  hairPurple: identityAtlasCell(3, 1),
+  hairPink: identityAtlasCell(0, 2),
+  sunglassesBlack: identityAtlasCell(1, 2),
+  sunglassesRed: identityAtlasCell(2, 2),
+  whiteTank: identityAtlasCell(3, 2),
+  blackMesh: identityAtlasCell(0, 3),
+  tattooSkin: identityAtlasCell(1, 3),
+  goldChain: identityAtlasCell(2, 3),
+  wetBoot: identityAtlasCell(3, 3),
+};
+
 const heroVisualPalette = {
   name: "橙黃雨衣",
   gltfPanel: characterWavePanels.orangeRaincoat,
@@ -230,6 +254,12 @@ const heroVisualPalette = {
   deepCoatPanel: characterWavePanels.orangeRaincoat,
   rubberPanel: characterWavePanels.rubberGloves,
   visorPanel: characterWavePanels.cyanVisor,
+  identitySkinPanel: characterIdentityPanels.skinWarm,
+  hairPanel: characterIdentityPanels.hairLong,
+  eyewearPanel: characterIdentityPanels.sunglassesBlack,
+  undershirtPanel: characterIdentityPanels.blackMesh,
+  hairShape: "wetLong",
+  faceShape: "sharp",
   accent: 0x2df4ed,
   secondaryAccent: 0xff2f6d,
   emissive: 0x2a1002,
@@ -271,6 +301,12 @@ const enemyWavePalettes = [
     style: "floralBrawler",
     pattern: "floral",
     hairColor: 0x14100e,
+    identitySkinPanel: characterIdentityPanels.skinStubble,
+    hairPanel: characterIdentityPanels.hairSlick,
+    eyewearPanel: characterIdentityPanels.sunglassesRed,
+    undershirtPanel: characterIdentityPanels.whiteTank,
+    tattooPanel: characterIdentityPanels.tattooSkin,
+    hairShape: "slickQuiff",
     weaponType: "baton",
   },
   {
@@ -308,6 +344,11 @@ const enemyWavePalettes = [
     style: "greenBomber",
     pattern: "bomber",
     hairColor: 0x12100c,
+    identitySkinPanel: characterIdentityPanels.skinWarm,
+    hairPanel: characterIdentityPanels.hairSlick,
+    eyewearPanel: characterIdentityPanels.sunglassesBlack,
+    undershirtPanel: characterIdentityPanels.blackMesh,
+    hairShape: "shortUndercut",
     weaponType: "baton",
   },
   {
@@ -344,6 +385,12 @@ const enemyWavePalettes = [
     style: "purpleKnife",
     pattern: "leather",
     hairColor: 0x5d258b,
+    identitySkinPanel: characterIdentityPanels.skinWeathered,
+    hairPanel: characterIdentityPanels.hairPurple,
+    eyewearPanel: characterIdentityPanels.sunglassesRed,
+    undershirtPanel: characterIdentityPanels.blackMesh,
+    tattooPanel: characterIdentityPanels.tattooSkin,
+    hairShape: "spikes",
     weaponType: "knife",
   },
   {
@@ -381,6 +428,11 @@ const enemyWavePalettes = [
     style: "whiteSuit",
     pattern: "plain",
     hairColor: 0x111111,
+    identitySkinPanel: characterIdentityPanels.skinWarm,
+    hairPanel: characterIdentityPanels.hairSlick,
+    eyewearPanel: characterIdentityPanels.sunglassesBlack,
+    undershirtPanel: characterIdentityPanels.whiteTank,
+    hairShape: "slickPart",
     weaponType: "cane",
   },
   {
@@ -418,6 +470,12 @@ const enemyWavePalettes = [
     style: "leopardBruiser",
     pattern: "leopard",
     hairColor: 0x1a120c,
+    identitySkinPanel: characterIdentityPanels.skinWeathered,
+    hairPanel: characterIdentityPanels.scalpShaved,
+    eyewearPanel: characterIdentityPanels.sunglassesRed,
+    undershirtPanel: characterIdentityPanels.whiteTank,
+    tattooPanel: characterIdentityPanels.tattooSkin,
+    hairShape: "shavedMohawk",
     weaponType: "baton",
   },
   {
@@ -454,6 +512,12 @@ const enemyWavePalettes = [
     style: "denimFighter",
     pattern: "denim",
     hairColor: 0x17130f,
+    identitySkinPanel: characterIdentityPanels.skinStubble,
+    hairPanel: characterIdentityPanels.hairSlick,
+    eyewearPanel: characterIdentityPanels.sunglassesBlack,
+    undershirtPanel: characterIdentityPanels.whiteTank,
+    tattooPanel: characterIdentityPanels.tattooSkin,
+    hairShape: "shortMessy",
     weaponType: "fists",
   },
   {
@@ -492,6 +556,12 @@ const enemyWavePalettes = [
     style: "goldBoss",
     pattern: "embroidered",
     hairColor: 0x10100e,
+    identitySkinPanel: characterIdentityPanels.skinWeathered,
+    hairPanel: characterIdentityPanels.hairSlick,
+    eyewearPanel: characterIdentityPanels.sunglassesBlack,
+    undershirtPanel: characterIdentityPanels.blackMesh,
+    tattooPanel: characterIdentityPanels.tattooSkin,
+    hairShape: "slickBack",
     weaponType: "cane",
   },
   {
@@ -529,6 +599,11 @@ const enemyWavePalettes = [
     style: "denimLeader",
     pattern: "denim",
     hairColor: 0x17120e,
+    identitySkinPanel: characterIdentityPanels.skinWarm,
+    hairPanel: characterIdentityPanels.hairLong,
+    eyewearPanel: characterIdentityPanels.sunglassesBlack,
+    undershirtPanel: characterIdentityPanels.blackMesh,
+    hairShape: "long",
     weaponType: "baton",
   },
   {
@@ -566,6 +641,11 @@ const enemyWavePalettes = [
     style: "constructionHeavy",
     pattern: "workwear",
     hairColor: 0x17110d,
+    identitySkinPanel: characterIdentityPanels.skinWeathered,
+    hairPanel: characterIdentityPanels.scalpShaved,
+    eyewearPanel: characterIdentityPanels.sunglassesRed,
+    undershirtPanel: characterIdentityPanels.blackMesh,
+    hairShape: "hardHat",
     weaponType: "hammer",
   },
   {
@@ -603,6 +683,11 @@ const enemyWavePalettes = [
     style: "pinkBomber",
     pattern: "bomber",
     hairColor: 0xff4da6,
+    identitySkinPanel: characterIdentityPanels.skinWarm,
+    hairPanel: characterIdentityPanels.hairPink,
+    eyewearPanel: characterIdentityPanels.sunglassesRed,
+    undershirtPanel: characterIdentityPanels.blackMesh,
+    hairShape: "spikes",
     weaponType: "baton",
   },
 ];
@@ -840,6 +925,7 @@ function createGeneratedAssetTextures() {
   return {
     character: load(characterMaterialAtlasUrl),
     cinematicCharacter: load(characterCinematicAtlasUrl),
+    identityCharacter: load(characterIdentityAtlasUrl),
     characterRosterVivid: load(characterRosterVividUrl),
     waveCharacter: load(characterWaveAtlasUrl),
     atlas: load(hkMaterialAtlasUrl),
@@ -888,7 +974,14 @@ function actorCharacterTexture(panel) {
   if (panel?.atlas === "waveCharacter") {
     return atlasTexture(panel.rect, generatedAssets.waveCharacter);
   }
+  if (panel?.atlas === "identityCharacter") {
+    return atlasTexture(panel.rect, generatedAssets.identityCharacter);
+  }
   return cinematicCharacterTexture(panel);
+}
+
+function identityCharacterTexture(panel) {
+  return actorCharacterTexture(panel ?? characterIdentityPanels.skinWarm);
 }
 
 function streetPatternTexture(kind, baseHex, accentHex, secondaryHex) {
@@ -2952,6 +3045,52 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     emissive: role === "player" ? palette.accent : palette.secondaryAccent,
     emissiveIntensity: 0.24,
   });
+  const identitySkin = new THREE.MeshStandardMaterial({
+    color: palette.skinColor ?? 0x6a4d3a,
+    map: identityCharacterTexture(palette.identitySkinPanel ?? characterIdentityPanels.skinWarm),
+    roughness: 0.58,
+    metalness: 0.04,
+    envMapIntensity: 0.68,
+  });
+  const identityHair = new THREE.MeshStandardMaterial({
+    color: palette.hairColor ?? 0x14100e,
+    map: identityCharacterTexture(palette.hairPanel ?? characterIdentityPanels.hairSlick),
+    roughness: 0.42,
+    metalness: 0.08,
+    envMapIntensity: 0.72,
+  });
+  const identityEyewear = new THREE.MeshStandardMaterial({
+    color: palette.visorColor ?? 0x070707,
+    map: identityCharacterTexture(palette.eyewearPanel ?? characterIdentityPanels.sunglassesBlack),
+    roughness: 0.12,
+    metalness: 0.46,
+    envMapIntensity: 1.38,
+    emissive: palette.accent,
+    emissiveIntensity: role === "player" ? 0.18 : 0.08,
+  });
+  const undershirt = new THREE.MeshStandardMaterial({
+    color: palette.deepCoatColor ?? 0x111111,
+    map: identityCharacterTexture(palette.undershirtPanel ?? characterIdentityPanels.blackMesh),
+    roughness: 0.58,
+    metalness: 0.04,
+    envMapIntensity: 0.76,
+  });
+  const tattooSkin = new THREE.MeshStandardMaterial({
+    color: palette.skinColor ?? 0x6a4d3a,
+    map: identityCharacterTexture(palette.tattooPanel ?? characterIdentityPanels.tattooSkin),
+    roughness: 0.6,
+    metalness: 0.04,
+    envMapIntensity: 0.66,
+  });
+  const chainMaterial = new THREE.MeshStandardMaterial({
+    color: palette.decalsColor,
+    map: identityCharacterTexture(characterIdentityPanels.goldChain),
+    roughness: 0.2,
+    metalness: 0.78,
+    envMapIntensity: 1.34,
+    emissive: palette.decalEmissive ?? palette.emissive,
+    emissiveIntensity: 0.04,
+  });
   const swayParts = [];
 
   const add = (geometry, material, position, rotation = null, options = {}) => {
@@ -2972,6 +3111,26 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
   };
 
   if (role === "player") {
+    const facePatch = add(new THREE.SphereGeometry(0.19, 18, 11), identitySkin, [0, 1.87, 0.24], [0.02, 0, 0]);
+    facePatch.scale.set(0.82, 1.08, 0.42);
+    add(roundedBox(0.052, 0.07, 0.04, 0.017), identitySkin, [0, 1.85, 0.33], [0.02, 0, 0]);
+    add(roundedBox(0.15, 0.04, 0.035, 0.014), identitySkin, [0, 1.74, 0.29], [0.02, 0, 0]);
+    const hairCap = add(new THREE.SphereGeometry(0.23, 18, 9, 0, Math.PI * 2, 0, Math.PI * 0.55), identityHair, [0, 2.0, -0.035], [0.02, 0, 0]);
+    hairCap.scale.set(1.02, 0.54, 0.94);
+    add(roundedBox(0.12, 0.5, 0.06, 0.03), identityHair, [-0.23, 1.74, -0.05], [0.1, 0, 0.16], { sway: true });
+    add(roundedBox(0.12, 0.5, 0.06, 0.03), identityHair, [0.23, 1.74, -0.05], [0.1, 0, -0.16], { sway: true });
+    add(roundedBox(0.26, 0.48, 0.055, 0.028), identityHair, [0, 1.72, -0.17], [0.12, 0, 0], { sway: true });
+    add(roundedBox(0.34, 0.055, 0.045, 0.018), identityEyewear, [0, 1.91, 0.265]);
+
+    add(roundedBox(0.5, 0.58, 0.055, 0.04), undershirt, [0, 1.24, 0.48], [-0.08, 0, 0]);
+    add(roundedBox(0.27, 0.72, 0.06, 0.035), coat, [-0.24, 1.2, 0.51], [-0.08, 0.06, 0.14], { sway: true });
+    add(roundedBox(0.27, 0.72, 0.06, 0.035), coat, [0.24, 1.2, 0.51], [-0.08, -0.06, -0.14], { sway: true });
+    add(roundedBox(0.6, 0.78, 0.06, 0.04), coat, [0, 1.08, -0.38], [0.1, 0, 0], { sway: true });
+    addMirrored(roundedBox(0.35, 0.15, 0.48, 0.06), coat, 0.48, 1.5, 0.02, [0, 0, 0.13]);
+    add(roundedBox(0.58, 0.09, 0.065, 0.025), harness, [0, 0.92, 0.48], [-0.04, 0, 0]);
+    add(roundedBox(0.13, 0.62, 0.038, 0.017), neon, [-0.16, 1.2, 0.54], [-0.08, 0, -0.05]);
+    add(roundedBox(0.13, 0.62, 0.038, 0.017), neonSecondary, [0.16, 1.2, 0.54], [-0.08, 0, 0.05]);
+
     const weapon = new THREE.Group();
     const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 10), metal);
     handle.rotation.x = Math.PI / 2;
@@ -2991,8 +3150,8 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     kit.userData.weapon = weapon;
     kit.userData.glowMaterials = [neon, neonSecondary];
     kit.userData.swayParts = swayParts;
-    kit.scale.set(0.62, 0.86, 0.66);
-    kit.position.y = 0.15;
+    kit.scale.set(0.78, 0.96, 0.82);
+    kit.position.y = 0.02;
     return kit;
   }
 
@@ -3007,18 +3166,6 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
       deepCoat.map = streetPatternTexture("denim", palette.deepCoatColor, palette.accent, palette.secondaryAccent);
       deepCoat.needsUpdate = true;
     }
-    const hair = new THREE.MeshStandardMaterial({
-      color: palette.hairColor ?? 0x14100e,
-      roughness: 0.52,
-      metalness: 0.06,
-      envMapIntensity: 0.55,
-    });
-    const skin = new THREE.MeshStandardMaterial({
-      color: palette.skinColor ?? 0x6a4d3a,
-      roughness: 0.58,
-      metalness: 0.04,
-      envMapIntensity: 0.64,
-    });
     const tape = new THREE.MeshStandardMaterial({
       color: 0xf2efe3,
       roughness: 0.72,
@@ -3027,26 +3174,40 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     });
     const lapelMaterial = style === "whiteSuit" ? deepCoat : decals;
 
-    const facePatch = add(new THREE.SphereGeometry(0.19, 18, 11), skin, [0, 1.86, 0.225], [0.02, 0, 0]);
+    const facePatch = add(new THREE.SphereGeometry(0.19, 18, 11), identitySkin, [0, 1.86, 0.225], [0.02, 0, 0]);
     facePatch.scale.set(0.84, 1.08, 0.42);
-    const hairCap = add(new THREE.SphereGeometry(0.22, 18, 9, 0, Math.PI * 2, 0, Math.PI * 0.52), hair, [0, 1.99, -0.035], [0.02, 0, 0]);
+    add(roundedBox(0.055, 0.075, 0.045, 0.018), identitySkin, [0, 1.84, 0.32], [0.02, 0, 0]);
+    add(roundedBox(0.16, 0.045, 0.04, 0.016), identitySkin, [0, 1.73, 0.28], [0.02, 0, 0]);
+    const hairCap = add(new THREE.SphereGeometry(0.22, 18, 9, 0, Math.PI * 2, 0, Math.PI * 0.52), identityHair, [0, 1.99, -0.035], [0.02, 0, 0]);
     hairCap.scale.set(1.06, 0.54, 0.9);
-    if (style === "denimLeader") {
-      add(roundedBox(0.14, 0.58, 0.065, 0.03), hair, [-0.23, 1.75, -0.04], [0.1, 0, 0.18], { sway: true });
-      add(roundedBox(0.14, 0.58, 0.065, 0.03), hair, [0.23, 1.75, -0.04], [0.1, 0, -0.18], { sway: true });
-      add(roundedBox(0.24, 0.52, 0.06, 0.03), hair, [0, 1.7, -0.18], [0.12, 0, 0], { sway: true });
-    } else if (style === "purpleKnife" || style === "pinkBomber") {
+    if (palette.hairShape === "long" || palette.hairShape === "wetLong") {
+      add(roundedBox(0.14, 0.58, 0.065, 0.03), identityHair, [-0.23, 1.75, -0.04], [0.1, 0, 0.18], { sway: true });
+      add(roundedBox(0.14, 0.58, 0.065, 0.03), identityHair, [0.23, 1.75, -0.04], [0.1, 0, -0.18], { sway: true });
+      add(roundedBox(0.24, 0.52, 0.06, 0.03), identityHair, [0, 1.7, -0.18], [0.12, 0, 0], { sway: true });
+    } else if (palette.hairShape === "spikes") {
       for (let i = -2; i <= 2; i += 1) {
-        const spike = add(new THREE.ConeGeometry(0.045, 0.22, 6), hair, [i * 0.055, 2.16 + Math.abs(i) * 0.012, 0.03], [0.42 - Math.abs(i) * 0.08, 0, i * -0.16]);
+        const spike = add(new THREE.ConeGeometry(0.045, 0.22, 6), identityHair, [i * 0.055, 2.16 + Math.abs(i) * 0.012, 0.03], [0.42 - Math.abs(i) * 0.08, 0, i * -0.16]);
         spike.castShadow = true;
       }
+    } else if (palette.hairShape === "slickQuiff" || palette.hairShape === "slickBack") {
+      add(roundedBox(0.2, 0.11, 0.16, 0.035), identityHair, [0, 2.07, 0.12], [-0.28, 0, 0]);
+      add(roundedBox(0.11, 0.24, 0.045, 0.018), identityHair, [-0.17, 1.88, 0.04], [0.02, 0, 0.14]);
+      add(roundedBox(0.11, 0.24, 0.045, 0.018), identityHair, [0.17, 1.88, 0.04], [0.02, 0, -0.14]);
+    } else if (palette.hairShape === "shavedMohawk") {
+      hairCap.scale.set(0.56, 0.28, 0.72);
+      add(roundedBox(0.09, 0.3, 0.095, 0.03), identityHair, [0, 2.04, 0.02], [-0.14, 0, 0]);
+    } else if (palette.hairShape === "hardHat") {
+      hairCap.visible = false;
+      const hardHat = add(new THREE.SphereGeometry(0.255, 18, 8, 0, Math.PI * 2, 0, Math.PI * 0.48), decals, [0, 2.01, 0.02]);
+      hardHat.scale.set(1.05, 0.45, 0.9);
+      add(roundedBox(0.53, 0.045, 0.22, 0.018), decals, [0, 1.96, 0.15]);
     }
 
-    add(roundedBox(0.34, 0.085, 0.06, 0.026), rubber, [0, 1.91, 0.25]);
-    add(roundedBox(0.18, 0.055, 0.045, 0.018), decals, [-0.21, 1.88, 0.24]);
-    add(roundedBox(0.18, 0.055, 0.045, 0.018), decals, [0.21, 1.88, 0.24]);
+    add(roundedBox(0.34, 0.085, 0.06, 0.026), identityEyewear, [0, 1.91, 0.25]);
+    add(roundedBox(0.18, 0.055, 0.045, 0.018), identityEyewear, [-0.21, 1.88, 0.24]);
+    add(roundedBox(0.18, 0.055, 0.045, 0.018), identityEyewear, [0.21, 1.88, 0.24]);
 
-    add(roundedBox(0.48, 0.58, 0.055, 0.04), deepCoat, [0, 1.25, 0.43], [-0.08, 0, 0]);
+    add(roundedBox(0.48, 0.58, 0.055, 0.04), undershirt, [0, 1.25, 0.43], [-0.08, 0, 0]);
     add(roundedBox(0.24, 0.66, 0.055, 0.035), coat, [-0.23, 1.21, 0.45], [-0.08, 0.05, 0.11], { sway: true });
     add(roundedBox(0.24, 0.66, 0.055, 0.035), coat, [0.23, 1.21, 0.45], [-0.08, -0.05, -0.11], { sway: true });
     add(roundedBox(0.5, 0.74, 0.055, 0.04), coat, [0, 1.13, -0.36], [0.1, 0, 0], { sway: true });
@@ -3068,7 +3229,7 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
 
     const neckChain = new THREE.Mesh(
       new THREE.TorusGeometry(0.19, 0.012, 8, 48, Math.PI * 1.25),
-      decals,
+      chainMaterial,
     );
     neckChain.position.set(0, 1.56, 0.47);
     neckChain.rotation.set(0.18, 0, Math.PI * 0.88);
@@ -3088,7 +3249,7 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
         6,
         false,
       ),
-      decals,
+      chainMaterial,
     );
     waistChain.castShadow = true;
     kit.add(waistChain);
@@ -3097,6 +3258,9 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     addMirrored(roundedBox(0.12, 0.38, 0.09, 0.035), harness, 0.61, 1.1, 0.18, [0.14, 0, 0.14]);
     addMirrored(roundedBox(0.16, 0.12, 0.18, 0.035), rubber, 0.66, 0.82, 0.18, [0.05, 0, 0.08]);
     addMirrored(roundedBox(0.06, 0.38, 0.055, 0.018), decals, 0.62, 1.07, 0.24, [0.12, 0, 0.12]);
+    if (palette.tattooPanel) {
+      addMirrored(roundedBox(0.13, 0.28, 0.052, 0.018), tattooSkin, 0.63, 1.02, 0.29, [0.12, 0, 0.12]);
+    }
     if (style === "denimFighter") {
       addMirrored(roundedBox(0.18, 0.13, 0.052, 0.016), tape, 0.62, 1.0, 0.27, [0.12, 0, 0.12]);
       addMirrored(roundedBox(0.18, 0.13, 0.052, 0.016), tape, 0.65, 0.86, 0.22, [0.12, 0, 0.12]);
@@ -4326,8 +4490,8 @@ function spawnWave() {
     let z = clamp(baseZ - rng() * spread + (i % 2) * 4, world.streetMinZ + 4, world.streetMaxZ - 7);
     let x = (rng() > 0.5 ? 1 : -1) * (1.4 + rng() * 3.6);
     if (i === 0) {
-      z = clamp(player.group.position.z - 8.8, world.streetMinZ + 4, world.streetMaxZ - 7);
-      x = wave % 2 === 0 ? -0.42 : 0.42;
+      z = clamp(player.group.position.z - 12.4, world.streetMinZ + 4, world.streetMaxZ - 7);
+      x = wave % 2 === 0 ? -1.35 : 1.35;
     }
     enemies.push(createEnemy(x, z, wave));
   }
@@ -4635,7 +4799,7 @@ function createEnemy(x, z, level) {
     health: maxHealth,
     speed: (2.1 + Math.min(level * 0.1, 0.8) + rng() * 0.35) * (palette.speedMultiplier ?? 1),
     velocity: new THREE.Vector3(),
-    attackCooldown: 0.5 + rng() * 1.2,
+    attackCooldown: 1.15 + rng() * 1.25,
     attackWindup: 0,
     attackCommitted: false,
     hitFlash: 0,
