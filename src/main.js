@@ -4,6 +4,7 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import characterCinematicAtlasUrl from "./assets/character-cinematic-atlas.png";
 import characterMaterialAtlasUrl from "./assets/character-material-atlas.png";
+import characterRoster10Url from "./assets/character-roster-10.png";
 import characterWaveAtlasUrl from "./assets/character-wave-atlas.png";
 import hkCinematicStreetUrl from "./assets/hk-cinematic-street.png";
 import hkCloseStreetAtlasUrl from "./assets/hk-close-street-atlas.png";
@@ -23,6 +24,7 @@ const encounterBanner = document.querySelector("#encounter-banner");
 const statusStrip = document.querySelector("#status-strip");
 const damageVignette = document.querySelector("#damage-vignette");
 const reticle = document.querySelector("#reticle");
+const skillChips = [...document.querySelectorAll("[data-skill-chip]")];
 
 const renderSettings = {
   maxPixelRatio: window.innerWidth < 760 ? 0.66 : 0.62,
@@ -77,7 +79,7 @@ const input = {
   left: false,
   right: false,
   sprint: false,
-  dashQueued: false,
+  jumpQueued: false,
   movingTouchId: null,
   touchMove: new THREE.Vector2(),
 };
@@ -88,6 +90,8 @@ const cameraRig = {
   distance: 5.18,
   target: new THREE.Vector3(),
   desired: new THREE.Vector3(),
+  shake: 0,
+  shakePower: 0,
 };
 
 const tmpV3 = new THREE.Vector3();
@@ -368,6 +372,170 @@ const enemyWavePalettes = [
     emissive: 0x061f0f,
     hitColor: 0x7cffaa,
   },
+  {
+    name: "黑雨刀客",
+    gltfPanel: characterWavePanels.blackHelmet,
+    gltfColor: 0xffffff,
+    gltfRoughness: 0.18,
+    gltfMetalness: 0.6,
+    metalColor: 0x5e6570,
+    armorColor: 0x11161c,
+    coatColor: 0x05070a,
+    deepCoatColor: 0x020305,
+    rubberColor: 0x060708,
+    harnessColor: 0x23282f,
+    decalsColor: 0xffc05a,
+    visorColor: 0xff4f89,
+    bodyColor: 0x0b0e12,
+    jacketColor: 0x05070a,
+    pantsColor: 0x07080a,
+    bootColor: 0x030405,
+    skinColor: 0x131820,
+    armorPanel: characterWavePanels.gunmetal,
+    coatPanel: characterWavePanels.blackHelmet,
+    deepCoatPanel: characterWavePanels.meshSuit,
+    rubberPanel: characterWavePanels.rubberGloves,
+    visorPanel: characterWavePanels.magentaVisor,
+    accent: 0xff3e7d,
+    secondaryAccent: 0xffd45a,
+    emissive: 0x16030a,
+    hitColor: 0xff5286,
+    speedMultiplier: 1.14,
+    healthMultiplier: 0.92,
+    rigHeight: 1.94,
+  },
+  {
+    name: "金黑龍頭",
+    gltfPanel: characterWavePanels.orangeArmor,
+    gltfColor: 0xffffff,
+    gltfRoughness: 0.16,
+    gltfMetalness: 0.68,
+    gltfEnv: 1.34,
+    metalColor: 0xffc45a,
+    armorColor: 0xc99834,
+    coatColor: 0x16110a,
+    deepCoatColor: 0x070503,
+    rubberColor: 0x080706,
+    harnessColor: 0x3c2a12,
+    decalsColor: 0xffe7a2,
+    visorColor: 0xffe6a0,
+    bodyColor: 0x1f170b,
+    jacketColor: 0x16110a,
+    pantsColor: 0x080706,
+    bootColor: 0x070604,
+    skinColor: 0x302211,
+    armorPanel: characterWavePanels.orangeArmor,
+    coatPanel: characterWavePanels.tacticalFabric,
+    deepCoatPanel: characterWavePanels.gunmetal,
+    rubberPanel: characterWavePanels.rubberGloves,
+    visorPanel: characterWavePanels.cyanVisor,
+    accent: 0xffd76d,
+    secondaryAccent: 0xff2f6d,
+    emissive: 0x2d1c03,
+    hitColor: 0xffd76d,
+    speedMultiplier: 0.92,
+    healthMultiplier: 1.34,
+    visualScale: 1.08,
+    rigHeight: 2.1,
+  },
+  {
+    name: "藍雨披跑者",
+    gltfPanel: characterWavePanels.cyanArmor,
+    gltfColor: 0xffffff,
+    gltfRoughness: 0.28,
+    gltfMetalness: 0.36,
+    metalColor: 0x74bfff,
+    armorColor: 0x1e5f9e,
+    coatColor: 0x0b2d57,
+    deepCoatColor: 0x061224,
+    rubberColor: 0x071019,
+    harnessColor: 0x132d47,
+    decalsColor: 0xb6dfff,
+    visorColor: 0x9fd7ff,
+    bodyColor: 0x102a44,
+    jacketColor: 0x0b2d57,
+    pantsColor: 0x08131d,
+    bootColor: 0x061019,
+    skinColor: 0x15334d,
+    armorPanel: characterWavePanels.cyanArmor,
+    coatPanel: characterWavePanels.tacticalFabric,
+    deepCoatPanel: characterWavePanels.meshSuit,
+    rubberPanel: characterWavePanels.rubberGloves,
+    visorPanel: characterWavePanels.cyanVisor,
+    accent: 0x5bbdff,
+    secondaryAccent: 0x2df4ed,
+    emissive: 0x031525,
+    hitColor: 0x7dcaff,
+    speedMultiplier: 1.22,
+    healthMultiplier: 0.84,
+    visualScale: 0.96,
+    rigHeight: 1.86,
+  },
+  {
+    name: "灰橙重工",
+    gltfPanel: characterWavePanels.whiteArmor,
+    gltfColor: 0xffffff,
+    gltfRoughness: 0.34,
+    gltfMetalness: 0.5,
+    metalColor: 0xe6a353,
+    armorColor: 0x858b8f,
+    coatColor: 0x34383a,
+    deepCoatColor: 0x15181a,
+    rubberColor: 0x121517,
+    harnessColor: 0x4a341f,
+    decalsColor: 0xffb55f,
+    visorColor: 0xffb56a,
+    bodyColor: 0x383d40,
+    jacketColor: 0x34383a,
+    pantsColor: 0x1b1f22,
+    bootColor: 0x111315,
+    skinColor: 0x4c5357,
+    armorPanel: characterWavePanels.whiteArmor,
+    coatPanel: characterWavePanels.tacticalFabric,
+    deepCoatPanel: characterWavePanels.meshSuit,
+    rubberPanel: characterWavePanels.rubberGloves,
+    visorPanel: characterWavePanels.magentaVisor,
+    accent: 0xff963d,
+    secondaryAccent: 0xffd76d,
+    emissive: 0x211006,
+    hitColor: 0xffa24e,
+    speedMultiplier: 0.84,
+    healthMultiplier: 1.26,
+    visualScale: 1.12,
+    rigHeight: 2.05,
+  },
+  {
+    name: "霓白訊號兵",
+    gltfPanel: characterWavePanels.whiteArmor,
+    gltfColor: 0xffffff,
+    gltfRoughness: 0.18,
+    gltfMetalness: 0.62,
+    metalColor: 0xf6fbff,
+    armorColor: 0xe8eef4,
+    coatColor: 0x202733,
+    deepCoatColor: 0x0b1018,
+    rubberColor: 0x11141a,
+    harnessColor: 0x2a3644,
+    decalsColor: 0xffa9e4,
+    visorColor: 0xffb3f5,
+    bodyColor: 0x283240,
+    jacketColor: 0x202733,
+    pantsColor: 0x111722,
+    bootColor: 0x0b1017,
+    skinColor: 0x364252,
+    armorPanel: characterWavePanels.whiteArmor,
+    coatPanel: characterWavePanels.tacticalFabric,
+    deepCoatPanel: characterWavePanels.meshSuit,
+    rubberPanel: characterWavePanels.rubberGloves,
+    visorPanel: characterWavePanels.magentaVisor,
+    accent: 0xff7bd5,
+    secondaryAccent: 0x2df4ed,
+    emissive: 0x20071b,
+    hitColor: 0xff8bde,
+    speedMultiplier: 1.04,
+    healthMultiplier: 1.02,
+    rigHeight: 1.96,
+  },
 ];
 
 function getEnemyWavePalette(level = 1) {
@@ -377,6 +545,60 @@ function getEnemyWavePalette(level = 1) {
 function resolveActorPalette(role, level = 1, palette = null) {
   return palette ?? (role === "player" ? heroVisualPalette : getEnemyWavePalette(level));
 }
+
+const skillDefinitions = [
+  {
+    name: "電光穿梭",
+    shortName: "雷突",
+    cost: 18,
+    cooldown: 3.2,
+    duration: 0.38,
+    hitTime: 0.08,
+    damage: 36,
+    range: 4.9,
+    angle: 1.28,
+    knockback: 8.4,
+    effect: "dash",
+    colorA: 0x2df4ed,
+    colorB: 0xffd76d,
+    shake: 0.22,
+    invulnerable: 0.24,
+    dashSpeed: 15.8,
+  },
+  {
+    name: "雨刃環斬",
+    shortName: "環斬",
+    cost: 27,
+    cooldown: 5.8,
+    duration: 0.58,
+    hitTime: 0.18,
+    damage: 46,
+    radius: 3.35,
+    knockback: 7.2,
+    effect: "ring",
+    colorA: 0xff2f6d,
+    colorB: 0x2df4ed,
+    shake: 0.3,
+    invulnerable: 0.3,
+  },
+  {
+    name: "霓虹震地",
+    shortName: "震地",
+    cost: 36,
+    cooldown: 8.2,
+    duration: 0.78,
+    hitTime: 0.32,
+    damage: 68,
+    radius: 4.45,
+    knockback: 10.5,
+    effect: "stomp",
+    colorA: 0xffd76d,
+    colorB: 0x5cff9d,
+    shake: 0.48,
+    invulnerable: 0.45,
+    jumpImpulse: 4.5,
+  },
+];
 
 let gameStarted = false;
 let gameOver = false;
@@ -390,6 +612,7 @@ let elapsed = 0;
 const enemies = [];
 const floatingTexts = [];
 const sparks = [];
+const skillEffects = [];
 const afterimages = [];
 const animatedActors = [];
 const streetLife = {
@@ -542,6 +765,7 @@ function createGeneratedAssetTextures() {
   return {
     character: load(characterMaterialAtlasUrl),
     cinematicCharacter: load(characterCinematicAtlasUrl),
+    characterRoster10: load(characterRoster10Url),
     waveCharacter: load(characterWaveAtlasUrl),
     atlas: load(hkMaterialAtlasUrl),
     closeStreet: load(hkCloseStreetAtlasUrl),
@@ -2740,6 +2964,32 @@ function applyPlayerAttackPose(actor, progress, swing, type, dt) {
   }
 }
 
+function applyPlayerSkillPose(actor, skill, dt) {
+  if (!actor.gltfRoot || !skill) return;
+  const progress = clamp(skill.t / skill.def.duration, 0, 1);
+  const active = Math.sin(progress * Math.PI);
+  const snap = smoothstep01((progress - 0.08) / 0.36) * (1 - smoothstep01((progress - 0.62) / 0.26));
+  const baseRot = actor.gltfBaseRotation ?? { x: 0, y: Math.PI, z: 0 };
+  const basePos = actor.gltfBasePosition ?? { x: 0, z: 0 };
+  const dashLean = skill.def.effect === "dash" ? 0.54 : skill.def.effect === "stomp" ? -0.18 : 0.22;
+  const twist = skill.def.effect === "ring" ? Math.sin(progress * Math.PI * 2.2) * 0.58 : snap * 0.34;
+  actor.gltfRoot.rotation.x = damp(actor.gltfRoot.rotation.x, baseRot.x - dashLean * active, 24, dt);
+  actor.gltfRoot.rotation.y = damp(actor.gltfRoot.rotation.y, baseRot.y + twist, 24, dt);
+  actor.gltfRoot.rotation.z = damp(actor.gltfRoot.rotation.z, baseRot.z + active * (skill.def.effect === "ring" ? 0.2 : -0.16), 22, dt);
+  actor.gltfRoot.position.x = damp(actor.gltfRoot.position.x, basePos.x + Math.sin(progress * Math.PI * 2) * 0.08, 22, dt);
+  actor.gltfRoot.position.z = damp(actor.gltfRoot.position.z, basePos.z + active * (skill.def.effect === "dash" ? 0.54 : 0.18), 24, dt);
+  if (actor.rigKit) {
+    actor.rigKit.rotation.x = damp(actor.rigKit.rotation.x, -dashLean * active * 0.6, 24, dt);
+    actor.rigKit.rotation.y = damp(actor.rigKit.rotation.y, twist * 0.62, 24, dt);
+    actor.rigKit.rotation.z = damp(actor.rigKit.rotation.z, active * (skill.def.effect === "ring" ? 0.34 : -0.12), 22, dt);
+  }
+  if (actor.rigWeapon) {
+    actor.rigWeapon.rotation.x = damp(actor.rigWeapon.rotation.x, -1.08 + active * 1.9, 28, dt);
+    actor.rigWeapon.rotation.y = damp(actor.rigWeapon.rotation.y, -1.0 + twist * 1.3, 28, dt);
+    actor.rigWeapon.rotation.z = damp(actor.rigWeapon.rotation.z, -0.6 + active * 1.1, 28, dt);
+  }
+}
+
 function applyPlayerAttackBoneOverlay(actor) {
   const attack = actor.attack;
   const bones = actor.rigBones;
@@ -2777,6 +3027,44 @@ function applyPlayerAttackBoneOverlay(actor) {
   }
 }
 
+function applyPlayerSkillBoneOverlay(actor) {
+  const skill = actor.skill;
+  const bones = actor.rigBones;
+  if (!skill || !bones) return;
+  const progress = clamp(skill.t / skill.def.duration, 0, 1);
+  const active = Math.sin(progress * Math.PI);
+  const spin = skill.def.effect === "ring" ? Math.sin(progress * Math.PI * 2.4) : active;
+  const rightArm = bones["mixamorig:RightArm"];
+  const rightForeArm = bones["mixamorig:RightForeArm"];
+  const leftArm = bones["mixamorig:LeftArm"];
+  const leftForeArm = bones["mixamorig:LeftForeArm"];
+  const spine = bones["mixamorig:Spine"];
+  const spine1 = bones["mixamorig:Spine1"];
+  const spine2 = bones["mixamorig:Spine2"];
+  const rightUpLeg = bones["mixamorig:RightUpLeg"];
+  const leftUpLeg = bones["mixamorig:LeftUpLeg"];
+  if (spine) spine.rotation.y += spin * 0.22;
+  if (spine1) spine1.rotation.y += spin * 0.3;
+  if (spine2) {
+    spine2.rotation.x -= active * (skill.def.effect === "dash" ? 0.18 : -0.08);
+    spine2.rotation.y += spin * 0.26;
+  }
+  if (rightArm) {
+    rightArm.rotation.z -= active * 0.62;
+    rightArm.rotation.x -= active * 0.18;
+  }
+  if (rightForeArm) rightForeArm.rotation.z -= active * 0.45;
+  if (leftArm) {
+    leftArm.rotation.z += active * 0.34;
+    leftArm.rotation.x += skill.def.effect === "stomp" ? active * 0.2 : -active * 0.1;
+  }
+  if (leftForeArm) leftForeArm.rotation.z += active * 0.2;
+  if (!actor.grounded) {
+    if (rightUpLeg) rightUpLeg.rotation.x += 0.34;
+    if (leftUpLeg) leftUpLeg.rotation.x -= 0.22;
+  }
+}
+
 function setRiggedActorFlash(actor, amount, color) {
   if (!actor.rigMaterials) return;
   for (const material of actor.rigMaterials) {
@@ -2803,6 +3091,8 @@ function updateAnimatedActors(dt) {
     }
     if (actor === player && actor.attack) {
       applyPlayerAttackBoneOverlay(actor);
+    } else if (actor === player && actor.skill) {
+      applyPlayerSkillBoneOverlay(actor);
     }
   }
 }
@@ -3060,11 +3350,16 @@ function createPlayer() {
     yaw: Math.PI,
     moveDir: new THREE.Vector3(0, 0, -1),
     velocity: new THREE.Vector3(),
+    verticalVelocity: 0,
+    grounded: true,
+    jumpCooldown: 0,
     dashDir: new THREE.Vector3(0, 0, -1),
     dashTimer: 0,
     dashCooldown: 0,
     invulnerable: 0,
     attack: null,
+    skill: null,
+    skillCooldowns: skillDefinitions.map(() => 0),
     combo: 0,
     comboTimer: 0,
     hitPulse: 0,
@@ -3132,8 +3427,13 @@ function bindInput() {
   window.addEventListener("resize", resize);
   window.addEventListener("keydown", (event) => {
     setKey(event.code, true);
-    if (event.code === "Space") {
-      input.dashQueued = true;
+    if (event.code === "Space" && !event.repeat) {
+      input.jumpQueued = true;
+      event.preventDefault();
+    }
+    const skillSlot = getSkillSlotFromCode(event.code);
+    if (skillSlot !== -1 && !event.repeat) {
+      triggerSkill(skillSlot);
       event.preventDefault();
     }
   });
@@ -3145,7 +3445,7 @@ function bindInput() {
   });
   window.addEventListener("mousedown", (event) => {
     if (!gameStarted || gameOver) return;
-    if (document.pointerLockElement !== canvas) canvas.requestPointerLock?.();
+    if (document.pointerLockElement !== canvas) requestPointerLockSafe();
     if (event.button === 0) triggerAttack("light");
     if (event.button === 2) triggerAttack("heavy");
   });
@@ -3193,12 +3493,29 @@ function setKey(code, pressed) {
   if (code === "ShiftLeft" || code === "ShiftRight") input.sprint = pressed;
 }
 
+function getSkillSlotFromCode(code) {
+  if (code === "Digit1" || code === "Numpad1") return 0;
+  if (code === "Digit2" || code === "Numpad2") return 1;
+  if (code === "Digit3" || code === "Numpad3") return 2;
+  return -1;
+}
+
+function requestPointerLockSafe() {
+  try {
+    const request = canvas.requestPointerLock?.bind(canvas);
+    const result = request?.();
+    result?.catch?.(() => {});
+  } catch {
+    // Browser sandboxes can reject pointer lock; keyboard controls still work.
+  }
+}
+
 function beginGame() {
   gameStarted = true;
   gameOver = false;
   startButton.classList.add("hidden");
   canvas.focus();
-  canvas.requestPointerLock?.();
+  requestPointerLockSafe();
   if (wave === 0) {
     spawnWave();
   }
@@ -3211,6 +3528,7 @@ function resetGame() {
   }
   for (const text of floatingTexts.splice(0)) scene.remove(text.sprite);
   for (const spark of sparks.splice(0)) scene.remove(spark.mesh);
+  for (const effect of skillEffects.splice(0)) scene.remove(effect.group);
   for (const image of afterimages.splice(0)) scene.remove(image.sprite);
   player.group.position.set(0, 0, 40);
   player.group.rotation.y = Math.PI;
@@ -3218,12 +3536,22 @@ function resetGame() {
   player.stamina = player.maxStamina;
   player.yaw = Math.PI;
   player.velocity.set(0, 0, 0);
+  player.verticalVelocity = 0;
+  player.grounded = true;
+  player.jumpCooldown = 0;
+  player.contactShadow.position.y = 0.038;
+  player.contactShadow.material.opacity = 1;
   player.attack = null;
+  player.skill = null;
+  player.skillCooldowns = skillDefinitions.map(() => 0);
   player.combo = 0;
   player.comboTimer = 0;
   player.dashTimer = 0;
   player.dashCooldown = 0;
   player.invulnerable = 0;
+  input.jumpQueued = false;
+  cameraRig.shake = 0;
+  cameraRig.shakePower = 0;
   wave = 0;
   nextWaveTimer = 0;
   encounterTimer = 0;
@@ -3252,6 +3580,7 @@ function animate() {
   updateRain(dt);
   updateFloatingText(dt);
   updateSparks(dt);
+  updateSkillEffects(dt);
   updateAfterimages(dt);
   updateSceneMotion(dt);
   updateHud();
@@ -3263,6 +3592,10 @@ function updatePlayer(dt) {
   player.dashCooldown = Math.max(0, player.dashCooldown - dt);
   player.invulnerable = Math.max(0, player.invulnerable - dt);
   player.hitPulse = Math.max(0, player.hitPulse - dt);
+  player.jumpCooldown = Math.max(0, player.jumpCooldown - dt);
+  for (let i = 0; i < player.skillCooldowns.length; i += 1) {
+    player.skillCooldowns[i] = Math.max(0, player.skillCooldowns[i] - dt);
+  }
 
   if (player.comboTimer > 0) {
     player.comboTimer -= dt;
@@ -3285,18 +3618,12 @@ function updatePlayer(dt) {
   }
   if (desired.lengthSq() > 0.01) desired.normalize();
 
-  if (input.dashQueued && player.dashCooldown <= 0 && player.stamina >= 24) {
-    player.dashDir.copy(desired.lengthSq() > 0 ? desired : getPlayerForward());
-    player.dashTimer = 0.18;
-    player.dashCooldown = 0.62;
-    player.invulnerable = 0.24;
-    player.stamina -= 24;
-    addSparkBurst(player.group.position, 0x8afcff, 12, 1.7);
-  }
-  input.dashQueued = false;
+  if (input.jumpQueued) triggerJump();
+  input.jumpQueued = false;
+  updateActiveSkill(dt);
 
   const moving = desired.lengthSq() > 0.01;
-  if (moving && !player.attack) {
+  if (moving && !player.attack && !player.skill) {
     player.moveDir.copy(desired);
     const targetYaw = Math.atan2(desired.x, desired.z);
     player.yaw = shortestAngleDamp(player.yaw, targetYaw, 12, dt);
@@ -3305,14 +3632,18 @@ function updatePlayer(dt) {
 
   let speed = input.sprint && player.stamina > 6 ? 7.4 : 5.15;
   if (player.attack) speed *= player.attack.type === "heavy" ? 0.22 : 0.42;
-  if (input.sprint && moving && !player.attack && player.stamina > 0) {
+  if (player.skill && player.skill.def.effect !== "dash") speed *= 0.28;
+  if (input.sprint && moving && !player.attack && !player.skill && player.stamina > 0) {
     player.stamina = Math.max(0, player.stamina - dt * 9);
-  } else if (!player.attack) {
+  } else if (!player.attack && !player.skill) {
     player.stamina = Math.min(player.maxStamina, player.stamina + dt * 18);
   }
 
   const displacement = tmpV32.set(0, 0, 0);
-  if (player.dashTimer > 0) {
+  if (player.skill?.def.dashSpeed) {
+    const p = clamp(player.skill.t / player.skill.def.duration, 0, 1);
+    displacement.addScaledVector(getPlayerForward(), player.skill.def.dashSpeed * (1 - p * 0.42) * dt);
+  } else if (player.dashTimer > 0) {
     displacement.addScaledVector(player.dashDir, 17.5 * dt);
     player.dashTimer -= dt;
   } else if (moving) {
@@ -3322,13 +3653,28 @@ function updatePlayer(dt) {
   player.group.position.add(displacement);
   player.group.position.x = clamp(player.group.position.x, -world.sideLimitX, world.sideLimitX);
   player.group.position.z = clamp(player.group.position.z, world.streetMinZ, world.streetMaxZ);
+  if (!player.grounded || Math.abs(player.verticalVelocity) > 0.001) {
+    player.verticalVelocity -= 18.5 * dt;
+    player.group.position.y += player.verticalVelocity * dt;
+    if (player.group.position.y <= 0) {
+      if (!player.grounded) {
+        addSparkBurst(player.group.position.clone().add(new THREE.Vector3(0, 0.18, 0)), 0xffd76d, 12, 1.45);
+        spawnSkillEffect("jump", player.group.position, player.yaw, { radius: 1.25, duration: 0.34, colorA: 0xffd76d, colorB: 0x2df4ed });
+      }
+      player.group.position.y = 0;
+      player.verticalVelocity = 0;
+      player.grounded = true;
+    }
+  }
+  player.contactShadow.position.y = 0.038 - player.group.position.y;
+  player.contactShadow.material.opacity = player.grounded ? 1 : clamp(0.68 - player.group.position.y * 0.18, 0.28, 0.68);
 
   const strideSpeed = input.sprint ? 14 : 10;
   const stride = moving ? Math.sin(elapsed * strideSpeed) : 0;
   const bob = moving ? Math.abs(stride) * 0.035 : Math.sin(elapsed * 2) * 0.01;
   player.model.position.y = bob;
   if (visualMode.actors3D) {
-    const actionName = player.dashTimer > 0 ? "Run" : moving ? (input.sprint ? "Run" : "Walk") : "Idle";
+    const actionName = player.dashTimer > 0 || player.skill?.def.dashSpeed || !player.grounded ? "Run" : moving ? (input.sprint ? "Run" : "Walk") : "Idle";
     setActorAction(player, player.attack ? "Run" : actionName, player.attack ? 0.06 : 0.18);
     if (player.attack && player.currentAction) {
       player.currentAction.timeScale = player.attack.type === "heavy" ? 0.9 : 1.42;
@@ -3354,12 +3700,15 @@ function updatePlayer(dt) {
       player.afterimageTimer = 0.045;
     }
   }
-  player.torso.rotation.z = moving ? stride * 0.035 : Math.sin(elapsed * 1.6) * 0.012;
-  player.leftLeg.rotation.x = stride * 0.42;
-  player.rightLeg.rotation.x = -stride * 0.42;
-  player.leftArm.rotation.x = -stride * 0.24 + 0.24;
-  player.rightArm.rotation.x = stride * 0.22 - 0.16;
-  player.coatBack.rotation.x = 0.15 - Math.abs(stride) * 0.08;
+  const airborne = !player.grounded;
+  const skillSwing = player.skill ? Math.sin(clamp(player.skill.t / player.skill.def.duration, 0, 1) * Math.PI) : 0;
+  player.torso.rotation.z = airborne ? -0.08 : moving ? stride * 0.035 : Math.sin(elapsed * 1.6) * 0.012;
+  player.torso.rotation.x = airborne ? -0.08 : 0;
+  player.leftLeg.rotation.x = airborne ? 0.64 : stride * 0.42;
+  player.rightLeg.rotation.x = airborne ? -0.34 : -stride * 0.42;
+  player.leftArm.rotation.x = airborne ? -0.36 : -stride * 0.24 + 0.24;
+  player.rightArm.rotation.x = airborne ? 0.32 + skillSwing * 0.2 : stride * 0.22 - 0.16;
+  player.coatBack.rotation.x = 0.15 - Math.abs(stride) * 0.08 - (airborne ? 0.18 : 0);
 }
 
 function shortestAngleDamp(current, target, lambda, dt) {
@@ -3371,8 +3720,125 @@ function getPlayerForward() {
   return forwardV.set(Math.sin(player.yaw), 0, Math.cos(player.yaw)).normalize();
 }
 
+function triggerJump() {
+  if (!gameStarted || gameOver || !player.grounded || player.jumpCooldown > 0 || player.skill) return;
+  const cost = input.sprint ? 11 : 8;
+  if (player.stamina < cost) {
+    setStatus("電荷不足", true, 0.7);
+    return;
+  }
+  player.stamina -= cost;
+  player.verticalVelocity = 6.25;
+  player.grounded = false;
+  player.jumpCooldown = 0.22;
+  spawnSkillEffect("jump", player.group.position, player.yaw, { radius: 1.15, duration: 0.32, colorA: 0xffd76d, colorB: 0x2df4ed });
+  addSparkBurst(player.group.position.clone().add(new THREE.Vector3(0, 0.22, 0)), 0xffd76d, 9, 1.25);
+}
+
+function triggerSkill(slot) {
+  const def = skillDefinitions[slot];
+  if (!def || !gameStarted || gameOver || player.skill) return;
+  if (player.skillCooldowns[slot] > 0.05) {
+    setStatus(`${def.shortName} 冷卻 ${Math.ceil(player.skillCooldowns[slot])}`, true, 0.7);
+    return;
+  }
+  if (player.stamina < def.cost) {
+    setStatus("電荷不足", true, 0.7);
+    return;
+  }
+
+  const moveIntent = input.forward || input.back || input.left || input.right || input.movingTouchId !== null;
+  const snapped = faceNearestThreat((def.radius ?? def.range ?? 4) + 1.2);
+  if (!snapped && !moveIntent) {
+    player.yaw = cameraRig.yaw + Math.PI;
+  }
+  player.group.rotation.y = player.yaw;
+  player.attack = null;
+  player.stamina -= def.cost;
+  player.skillCooldowns[slot] = def.cooldown;
+  player.skill = {
+    slot,
+    def,
+    t: 0,
+    hitDone: false,
+    trailTimer: 0,
+  };
+  player.invulnerable = Math.max(player.invulnerable, def.invulnerable);
+  if (def.jumpImpulse && player.grounded) {
+    player.verticalVelocity = def.jumpImpulse;
+    player.grounded = false;
+  }
+
+  spawnSkillEffect(def.effect, player.group.position, player.yaw, def);
+  addSparkBurst(player.group.position.clone().add(new THREE.Vector3(0, 1.05, 0)), def.colorA, slot === 2 ? 22 : 14, slot === 2 ? 2.9 : 2.0);
+  setCameraShake(def.shake, def.duration + 0.08);
+  setStatus(`${slot + 1} / ${def.name}`, true, 1.15);
+}
+
+function updateActiveSkill(dt) {
+  const skill = player.skill;
+  if (!skill) return;
+
+  skill.t += dt;
+  skill.trailTimer -= dt;
+  if (skill.def.effect === "dash" && skill.trailTimer <= 0) {
+    const trailPos = player.group.position.clone().addScaledVector(getPlayerForward(), -0.35);
+    spawnSkillEffect("dashTrail", trailPos, player.yaw, { ...skill.def, duration: 0.22, radius: 0.76 });
+    skill.trailTimer = 0.045;
+  }
+
+  if (!skill.hitDone && skill.t >= skill.def.hitTime) {
+    skill.hitDone = true;
+    applySkillDamage(skill.def);
+    setCameraShake(skill.def.shake * 1.2, 0.22);
+  }
+
+  if (skill.t >= skill.def.duration) {
+    player.skill = null;
+  }
+}
+
+function applySkillDamage(def) {
+  const forward = getPlayerForward().clone();
+  let hits = 0;
+  for (const enemy of enemies) {
+    if (enemy.dead) continue;
+    const toEnemy = tmpV32.copy(enemy.group.position).sub(player.group.position);
+    toEnemy.y = 0;
+    const distance = toEnemy.length();
+    if (distance < 0.04) {
+      toEnemy.copy(forward);
+    } else {
+      toEnemy.normalize();
+    }
+
+    if (def.angle) {
+      if (distance > def.range) continue;
+      const dot = clamp(forward.dot(toEnemy), -1, 1);
+      if (Math.acos(dot) > def.angle * 0.5) continue;
+    } else if (distance > def.radius) {
+      continue;
+    }
+
+    hits += 1;
+    const falloff = def.radius ? clamp(1 - distance / (def.radius * 1.4), 0.62, 1) : 1;
+    damageEnemy(enemy, def.damage * falloff, toEnemy, def.knockback);
+  }
+
+  if (hits === 0) {
+    addSparkBurst(player.group.position.clone().addScaledVector(forward, 1.3).add(new THREE.Vector3(0, 0.85, 0)), def.colorB, 10, 1.8);
+  } else {
+    createFloatingText(`${def.shortName} x${hits}`, player.group.position, "#fff0a8");
+  }
+}
+
+function setCameraShake(power, duration) {
+  cameraRig.shake = Math.max(cameraRig.shake, duration);
+  cameraRig.shakePower = Math.max(cameraRig.shakePower, power);
+}
+
 function triggerAttack(type) {
-  if (player.attack) return;
+  if (player.attack || player.skill) return;
   const heavy = type === "heavy";
   const cost = heavy ? 28 : 13;
   if (player.stamina < cost) return;
@@ -3427,8 +3893,12 @@ function updateCombat(dt) {
     if (slash.material.opacity < 0.02) slash.mesh.visible = false;
     player.sword.rotation.set(-0.48, -0.45, -0.08);
     resetRiggedWeapon(player, dt);
-    resetRiggedPose(player, dt);
-    reticle.classList.remove("active");
+    if (player.skill) {
+      applyPlayerSkillPose(player, player.skill, dt);
+    } else {
+      resetRiggedPose(player, dt);
+    }
+    reticle.classList.toggle("active", Boolean(player.skill));
     return;
   }
 
@@ -3525,6 +3995,8 @@ function createEnemy(x, z, level) {
   group.position.set(x, 0, z);
   const shouldRig = enemies.filter((enemy) => enemy.useRig && !enemy.dead).length < renderSettings.maxRiggedEnemies;
   const palette = getEnemyWavePalette(level);
+  const visualScale = palette.visualScale ?? 1;
+  group.scale.setScalar(visualScale);
 
   const model = new THREE.Group();
   group.add(model);
@@ -3634,6 +4106,7 @@ function createEnemy(x, z, level) {
   group.add(contactShadow);
 
   scene.add(group);
+  const maxHealth = Math.round((72 + level * 12) * (palette.healthMultiplier ?? 1));
   const enemy = {
     id: enemyId += 1,
     group,
@@ -3649,9 +4122,9 @@ function createEnemy(x, z, level) {
     visor,
     baton,
     healthBar,
-    maxHealth: 72 + level * 12,
-    health: 72 + level * 12,
-    speed: 2.1 + Math.min(level * 0.1, 0.8) + rng() * 0.35,
+    maxHealth,
+    health: maxHealth,
+    speed: (2.1 + Math.min(level * 0.1, 0.8) + rng() * 0.35) * (palette.speedMultiplier ?? 1),
     velocity: new THREE.Vector3(),
     attackCooldown: 0.5 + rng() * 1.2,
     attackWindup: 0,
@@ -3667,7 +4140,7 @@ function createEnemy(x, z, level) {
   if (shouldRig) {
     attachRiggedActor(enemy, {
       role: "enemy",
-      desiredHeight: 1.98,
+      desiredHeight: palette.rigHeight ?? 1.98,
       level,
       palette,
       tint: palette.gltfColor,
@@ -3909,6 +4382,16 @@ function updateCamera(dt) {
   );
   cameraRig.desired.copy(target).add(offset);
   camera.position.lerp(cameraRig.desired, 1 - Math.exp(-8 * dt));
+  if (cameraRig.shake > 0) {
+    cameraRig.shake = Math.max(0, cameraRig.shake - dt);
+    const shakeAmount = cameraRig.shakePower * smoothstep01(cameraRig.shake / 0.42);
+    camera.position.x += (rng() - 0.5) * shakeAmount;
+    camera.position.y += (rng() - 0.5) * shakeAmount * 0.45;
+    camera.position.z += (rng() - 0.5) * shakeAmount;
+    cameraRig.shakePower *= Math.pow(0.05, dt);
+  } else {
+    cameraRig.shakePower = 0;
+  }
   camera.lookAt(target);
 }
 
@@ -4069,6 +4552,19 @@ function updateHud() {
   waveReadout.textContent = `${Math.max(1, wave || 1)}`;
   enemyReadout.textContent = `${enemies.filter((enemy) => !enemy.dead).length}`;
   comboReadout.textContent = `${player.combo}`;
+  skillChips.forEach((chip, index) => {
+    const def = skillDefinitions[index];
+    if (!def) return;
+    const cooldown = player.skillCooldowns[index] ?? 0;
+    const ratio = clamp(cooldown / def.cooldown, 0, 1);
+    chip.style.setProperty("--cooldown", `${ratio * 100}%`);
+    chip.classList.toggle("cooling", cooldown > 0.05);
+    chip.classList.toggle("drained", player.stamina < def.cost && cooldown <= 0.05);
+    const name = chip.querySelector("[data-skill-name]");
+    const timer = chip.querySelector("[data-skill-timer]");
+    if (name) name.textContent = def.shortName;
+    if (timer) timer.textContent = cooldown > 0.05 ? `${Math.ceil(cooldown)}` : `${def.cost}`;
+  });
 }
 
 function createFloatingText(text, position, color) {
@@ -4127,6 +4623,187 @@ function addSparkBurst(position, color, count, speed) {
       life: 0.32 + rng() * 0.28,
       maxLife: 0.6,
     });
+  }
+}
+
+function rgbaStyle(color, alpha) {
+  const c = new THREE.Color(color);
+  return `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${alpha})`;
+}
+
+function createSkillStreakTexture(colorA, colorB, variant = "dash") {
+  return canvasTexture(768, 256, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    const grad = ctx.createLinearGradient(0, h / 2, w, h / 2);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(0.24, rgbaStyle(colorA, 0.16));
+    grad.addColorStop(0.52, rgbaStyle(colorB, 0.88));
+    grad.addColorStop(0.78, rgbaStyle(colorA, 0.44));
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, h * 0.28, w, h * 0.44);
+    ctx.lineCap = "round";
+    ctx.shadowColor = rgbaStyle(colorA, 0.9);
+    ctx.shadowBlur = 26;
+    for (let i = 0; i < 8; i += 1) {
+      const y = h * (0.34 + rng() * 0.32);
+      ctx.strokeStyle = rgbaStyle(i % 2 ? colorA : colorB, 0.48 + rng() * 0.32);
+      ctx.lineWidth = variant === "ring" ? 4 + rng() * 7 : 6 + rng() * 12;
+      ctx.beginPath();
+      ctx.moveTo(w * (0.04 + rng() * 0.18), y);
+      ctx.bezierCurveTo(w * 0.32, y - 42 + rng() * 84, w * 0.66, y - 36 + rng() * 72, w * (0.86 + rng() * 0.1), y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(255,255,255,0.84)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.2, h * 0.51);
+    ctx.lineTo(w * 0.82, h * 0.47);
+    ctx.stroke();
+  });
+}
+
+function createSkillMaterial({ color = 0xffffff, opacity = 0.7, map = null } = {}) {
+  const material = new THREE.MeshBasicMaterial({
+    color,
+    map,
+    transparent: true,
+    opacity,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+  });
+  material.userData.baseOpacity = opacity;
+  return material;
+}
+
+function tagSkillMaterials(group) {
+  group.traverse((node) => {
+    if (!node.material) return;
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    for (const material of materials) {
+      material.userData.baseOpacity = material.userData.baseOpacity ?? material.opacity;
+    }
+  });
+}
+
+function spawnSkillEffect(kind, position, yaw, options = {}) {
+  const colorA = options.colorA ?? 0x2df4ed;
+  const colorB = options.colorB ?? 0xff2f6d;
+  const group = new THREE.Group();
+  group.position.copy(position);
+  group.position.y = Math.max(0.055, position.y + 0.055);
+  group.rotation.y = yaw;
+  const duration = options.duration ?? 0.5;
+  let endScale = 1.8;
+
+  if (kind === "dash") {
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.35, 5.4),
+      createSkillMaterial({ map: createSkillStreakTexture(colorA, colorB), opacity: 0.78 }),
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.z = -1.45;
+    group.add(ground);
+
+    const blade = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.6, 1.18),
+      createSkillMaterial({ map: createSkillStreakTexture(colorB, colorA), opacity: 0.64 }),
+    );
+    blade.position.set(0, 1.12, 1.05);
+    blade.rotation.z = -0.18;
+    group.add(blade);
+    endScale = 1.12;
+  } else if (kind === "dashTrail") {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(options.radius ?? 0.7, 0.018, 8, 60),
+      createSkillMaterial({ color: colorA, opacity: 0.48 }),
+    );
+    ring.rotation.x = Math.PI / 2;
+    group.add(ring);
+    endScale = 1.65;
+  } else if (kind === "ring") {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(options.radius ?? 3.2, 0.034, 12, 96),
+      createSkillMaterial({ color: colorA, opacity: 0.72 }),
+    );
+    ring.rotation.x = Math.PI / 2;
+    group.add(ring);
+    const slashPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry((options.radius ?? 3.2) * 2.12, 1.1),
+      createSkillMaterial({ map: createSkillStreakTexture(colorA, colorB, "ring"), opacity: 0.62 }),
+    );
+    slashPlane.position.y = 1.05;
+    slashPlane.rotation.z = 0.1;
+    group.add(slashPlane);
+    endScale = 1.22;
+  } else if (kind === "stomp") {
+    const radius = options.radius ?? 4.3;
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(radius, 0.045, 14, 112),
+      createSkillMaterial({ color: colorB, opacity: 0.82 }),
+    );
+    ring.rotation.x = Math.PI / 2;
+    group.add(ring);
+    const pillar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.42, 1.35, 2.2, 32, 1, true),
+      createSkillMaterial({ color: colorA, opacity: 0.18 }),
+    );
+    pillar.position.y = 1.1;
+    group.add(pillar);
+    const shock = new THREE.Mesh(
+      new THREE.PlaneGeometry(radius * 2.15, radius * 2.15),
+      createSkillMaterial({ map: createSkillStreakTexture(colorA, colorB, "ring"), opacity: 0.46 }),
+    );
+    shock.rotation.x = -Math.PI / 2;
+    group.add(shock);
+    endScale = 1.38;
+  } else {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(options.radius ?? 1.0, 0.025, 10, 72),
+      createSkillMaterial({ color: colorA, opacity: 0.54 }),
+    );
+    ring.rotation.x = Math.PI / 2;
+    group.add(ring);
+    endScale = 1.72;
+  }
+
+  tagSkillMaterials(group);
+  scene.add(group);
+  skillEffects.push({
+    group,
+    kind,
+    life: duration,
+    maxLife: duration,
+    endScale,
+  });
+}
+
+function updateSkillEffects(dt) {
+  for (let i = skillEffects.length - 1; i >= 0; i -= 1) {
+    const effect = skillEffects[i];
+    effect.life -= dt;
+    const p = clamp(1 - effect.life / effect.maxLife, 0, 1);
+    const fade = 1 - smoothstep01((p - 0.48) / 0.52);
+    const scale = 1 + (effect.endScale - 1) * smoothstep01(p);
+    effect.group.scale.setScalar(scale);
+    if (effect.kind === "dash") {
+      effect.group.position.addScaledVector(new THREE.Vector3(Math.sin(effect.group.rotation.y), 0, Math.cos(effect.group.rotation.y)), dt * 2.4);
+    }
+    if (effect.kind === "ring") effect.group.rotation.y += dt * 2.8;
+    effect.group.traverse((node) => {
+      if (!node.material) return;
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      for (const material of materials) {
+        const flicker = 0.88 + Math.sin(elapsed * 38 + effect.group.id) * 0.12;
+        material.opacity = (material.userData.baseOpacity ?? 0.6) * fade * flicker;
+      }
+    });
+    if (effect.life <= 0) {
+      scene.remove(effect.group);
+      skillEffects.splice(i, 1);
+    }
   }
 }
 
