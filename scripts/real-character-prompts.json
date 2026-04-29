@@ -1,0 +1,18 @@
+{
+  "hero": {
+    "slot": "hero",
+    "prompt": "Realistic game-ready Hong Kong street action protagonist, adult male, athletic build, bright burnt-orange rain jacket with black wet inner layers, shoulder-length black wet hair, visible face, amber sunglasses, folding street blade in right hand, modern Mong Kok rainy neon alley style, PBR leather and nylon, full body A-pose, clean humanoid topology, no base, no logo, no text, not a celebrity likeness, not cartoon, not chibi, not robot"
+  },
+  "enemy-01": {
+    "slot": "enemy-01",
+    "prompt": "Realistic Hong Kong 1990s street-gang brawler, adult male, red floral open shirt, white undershirt, black trousers, slick pompadour hair, gold chain, baton weapon, wet neon reflections, PBR fabric and skin, full body A-pose, game-ready humanoid, no base, no text, not a celebrity likeness, not cartoon, not chibi"
+  },
+  "enemy-02": {
+    "slot": "enemy-02",
+    "prompt": "Realistic Hong Kong alley knife fighter, adult male, purple leather jacket, black mesh shirt, sharp dyed hair, lean build, short knife, cinematic rainy street lighting, PBR leather and metal, full body A-pose, clean game-ready humanoid, no base, no text, not a celebrity likeness, not cartoon, not chibi"
+  },
+  "enemy-03": {
+    "slot": "enemy-03",
+    "prompt": "Realistic Hong Kong triad boss fighter, adult male, white double-breasted suit, black shirt, slick black hair, gold jewelry, cane weapon, confident stance, wet neon street reflections, PBR wool suit and polished metal, full body A-pose, game-ready humanoid, no base, no text, not a celebrity likeness, not cartoon, not chibi"
+  }
+}

@@ -131,6 +131,16 @@ function roundedBox(width, height, depth, radius = 0.035, segments = 4) {
   return new RoundedBoxGeometry(width, height, depth, segments, Math.min(radius, width * 0.45, height * 0.45, depth * 0.45));
 }
 
+function ellipsoid(width, height, depth, widthSegments = 28, heightSegments = 18) {
+  const geometry = new THREE.SphereGeometry(0.5, widthSegments, heightSegments);
+  geometry.scale(width, height, depth);
+  return geometry;
+}
+
+function taperedCylinder(topRadius, bottomRadius, height, radialSegments = 18) {
+  return new THREE.CylinderGeometry(topRadius, bottomRadius, height, radialSegments, 2);
+}
+
 function addBone(parent, name, position) {
   const bone = new THREE.Bone();
   bone.name = name;
@@ -217,13 +227,13 @@ function addCharacterMeshes(def, bones) {
     blackGlass: material("mat_sunglasses", 0x050607, { roughness: 0.08, metalness: 0.42, envMapIntensity: 1.4, emissive: c.accent, emissiveIntensity: 0.08 }),
   };
 
-  addMesh(bones.hips, "Pelvis", roundedBox(0.55, 0.24, 0.36, 0.07), mats.pants, [0, -0.06, 0.05]);
-  addMesh(bones.spine, "TorsoShirt", roundedBox(0.58, 0.58, 0.25, 0.08), mats.shirt, [0, 0.2, 0.08]);
-  addMesh(bones.chest, "JacketChest", roundedBox(def.build === "boss" ? 0.78 : 0.72, 0.56, 0.16, 0.065), mats.jacket, [0, -0.1, 0.19], [-0.08, 0, 0]);
-  addMesh(bones.chest, "JacketUpperBack", roundedBox(def.build === "boss" ? 0.74 : 0.7, 0.56, 0.12, 0.06), mats.jacket, [0, -0.1, -0.15], [0.08, 0, 0]);
-  addMesh(bones.chest, "LeftLapel", roundedBox(0.17, 0.48, 0.055, 0.025), def.build === "boss" ? mats.jacketDark : mats.trim, [-0.15, -0.08, 0.31], [-0.12, 0, -0.2]);
-  addMesh(bones.chest, "RightLapel", roundedBox(0.17, 0.48, 0.055, 0.025), def.build === "boss" ? mats.jacketDark : mats.trim, [0.15, -0.08, 0.31], [-0.12, 0, 0.2]);
-  addMesh(bones.hips, "Belt", roundedBox(0.72, 0.09, 0.42, 0.03), mats.jacketDark, [0, 0.02, 0.12]);
+  addMesh(bones.hips, "Pelvis", ellipsoid(0.58, 0.27, 0.38, 26, 14), mats.pants, [0, -0.06, 0.05]);
+  addMesh(bones.spine, "TorsoShirt", ellipsoid(def.build === "boss" ? 0.67 : 0.6, 0.68, 0.33, 32, 18), mats.shirt, [0, 0.18, 0.08], [-0.03, 0, 0]);
+  addMesh(bones.chest, "JacketChest", ellipsoid(def.build === "boss" ? 0.86 : 0.76, 0.58, 0.22, 32, 18), mats.jacket, [0, -0.1, 0.19], [-0.08, 0, 0]);
+  addMesh(bones.chest, "JacketUpperBack", ellipsoid(def.build === "boss" ? 0.82 : 0.74, 0.58, 0.18, 32, 18), mats.jacket, [0, -0.1, -0.15], [0.08, 0, 0]);
+  addMesh(bones.chest, "LeftLapel", roundedBox(0.13, 0.5, 0.045, 0.022), def.build === "boss" ? mats.jacketDark : mats.trim, [-0.14, -0.08, 0.33], [-0.14, 0.04, -0.28]);
+  addMesh(bones.chest, "RightLapel", roundedBox(0.13, 0.5, 0.045, 0.022), def.build === "boss" ? mats.jacketDark : mats.trim, [0.14, -0.08, 0.33], [-0.14, -0.04, 0.28]);
+  addMesh(bones.hips, "Belt", roundedBox(0.68, 0.075, 0.36, 0.026), mats.jacketDark, [0, 0.02, 0.13]);
 
   const coatLength = def.build === "hero" ? 0.84 : 0.66;
   addMesh(bones.hips, "CoatBack", roundedBox(0.66, coatLength, 0.07, 0.035), mats.jacket, [0, -0.28, -0.2], [0.14, 0, 0]);
@@ -240,11 +250,13 @@ function addCharacterMeshes(def, bones) {
   }
 
   if (def.build === "hero") {
-    addMesh(bones.chest, "RaincoatHood", new THREE.SphereGeometry(0.31, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), mats.jacket, [0, 0.31, -0.05], [0.05, 0, 0], [1.06, 0.72, 1.02]);
+    addMesh(bones.chest, "RaincoatFoldedHood", ellipsoid(0.44, 0.24, 0.2, 24, 12), mats.jacket, [0, 0.31, -0.24], [0.06, 0, 0]);
     addMesh(bones.chest, "RaincoatBackStripe", roundedBox(0.48, 0.045, 0.035, 0.014), mats.trim, [0, 0.12, -0.23], [0.08, 0, 0]);
     addMesh(bones.chest, "RaincoatBackGlow", roundedBox(0.045, 0.44, 0.03, 0.012), mats.accent, [0, -0.12, -0.235], [0.08, 0, 0]);
     addMesh(bones.chest, "NeonChestStripe", roundedBox(0.075, 0.5, 0.035, 0.014), mats.accent, [0.18, -0.09, 0.33], [-0.1, 0, 0.04]);
     addMesh(bones.chest, "RedChestStripe", roundedBox(0.055, 0.42, 0.03, 0.012), mats.secondary, [-0.18, -0.11, 0.33], [-0.1, 0, -0.04]);
+    addMesh(bones.chest, "OpenRaincoatCollarLeft", roundedBox(0.11, 0.24, 0.05, 0.02), mats.jacketDark, [-0.2, 0.14, 0.31], [-0.24, 0, -0.38]);
+    addMesh(bones.chest, "OpenRaincoatCollarRight", roundedBox(0.11, 0.24, 0.05, 0.02), mats.jacketDark, [0.2, 0.14, 0.31], [-0.24, 0, 0.38]);
   }
 
   if (def.build === "boss") {
@@ -255,33 +267,35 @@ function addCharacterMeshes(def, bones) {
     bones.chest.add(chain);
   }
 
-  addMesh(bones.neck, "NeckMesh", new THREE.CylinderGeometry(0.12, 0.14, 0.16, 14), mats.skin, [0, 0.04, 0.03]);
-  addMesh(bones.head, "HeadMesh", new THREE.SphereGeometry(0.235, 24, 16), mats.skin, [0, 0.05, 0.04], [0.02, 0, 0], [0.9, 1.08, 0.86]);
-  addMesh(bones.head, "Nose", roundedBox(0.045, 0.07, 0.06, 0.018), mats.skin, [0, 0.04, 0.24], [0.02, 0, 0]);
-  addMesh(bones.head, "MouthShadow", roundedBox(0.14, 0.025, 0.018, 0.008), mats.jacketDark, [0, -0.065, 0.24]);
+  addMesh(bones.neck, "NeckMesh", taperedCylinder(0.11, 0.135, 0.16, 18), mats.skin, [0, 0.04, 0.03]);
+  addMesh(bones.head, "HeadMesh", ellipsoid(0.42, 0.52, 0.38, 32, 20), mats.skin, [0, 0.05, 0.04], [0.02, 0, 0]);
+  addMesh(bones.head, "CheekLeft", ellipsoid(0.1, 0.08, 0.035, 16, 8), mats.skin, [-0.1, -0.01, 0.23]);
+  addMesh(bones.head, "CheekRight", ellipsoid(0.1, 0.08, 0.035, 16, 8), mats.skin, [0.1, -0.01, 0.23]);
+  addMesh(bones.head, "Nose", ellipsoid(0.052, 0.08, 0.085, 14, 8), mats.skin, [0, 0.035, 0.245], [0.08, 0, 0]);
+  addMesh(bones.head, "MouthShadow", roundedBox(0.12, 0.018, 0.012, 0.006), mats.jacketDark, [0, -0.085, 0.245]);
   addHair(def, bones.head, mats);
-  addMesh(bones.head, "SunglassesBridge", roundedBox(0.35, 0.055, 0.038, 0.02), mats.blackGlass, [0, 0.08, 0.225]);
-  addMesh(bones.head, "LeftSunglassLens", roundedBox(0.16, 0.06, 0.034, 0.016), mats.blackGlass, [-0.13, 0.075, 0.235]);
-  addMesh(bones.head, "RightSunglassLens", roundedBox(0.16, 0.06, 0.034, 0.016), mats.blackGlass, [0.13, 0.075, 0.235]);
+  addMesh(bones.head, "SunglassesBridge", roundedBox(0.12, 0.018, 0.025, 0.008), mats.blackGlass, [0, 0.085, 0.255]);
+  addMesh(bones.head, "LeftSunglassLens", roundedBox(0.13, 0.055, 0.028, 0.014), mats.blackGlass, [-0.09, 0.075, 0.262]);
+  addMesh(bones.head, "RightSunglassLens", roundedBox(0.13, 0.055, 0.028, 0.014), mats.blackGlass, [0.09, 0.075, 0.262]);
 
   addLimbMeshes(def, bones, mats);
   addWeapon(def, bones.rightHand, mats);
 }
 
 function addHair(def, head, mats) {
-  const cap = addMesh(head, "HairCap", new THREE.SphereGeometry(0.255, 22, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), mats.hair, [0, 0.18, -0.015], [0.02, 0, 0], [1.02, 0.58, 0.92]);
+  const cap = addMesh(head, "HairCap", new THREE.SphereGeometry(0.255, 26, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), mats.hair, [0, 0.18, -0.015], [0.02, 0, 0], [1.02, 0.58, 0.92]);
   if (def.hair === "long") {
-    addMesh(head, "LeftWetHair", roundedBox(0.11, 0.55, 0.06, 0.026), mats.hair, [-0.21, -0.1, -0.08], [0.12, 0, 0.13]);
-    addMesh(head, "RightWetHair", roundedBox(0.11, 0.55, 0.06, 0.026), mats.hair, [0.21, -0.1, -0.08], [0.12, 0, -0.13]);
-    addMesh(head, "BackWetHair", roundedBox(0.25, 0.58, 0.06, 0.028), mats.hair, [0, -0.13, -0.18], [0.12, 0, 0]);
+    addMesh(head, "LeftWetHair", ellipsoid(0.11, 0.58, 0.07, 14, 16), mats.hair, [-0.21, -0.12, -0.08], [0.12, 0, 0.16]);
+    addMesh(head, "RightWetHair", ellipsoid(0.11, 0.58, 0.07, 14, 16), mats.hair, [0.21, -0.12, -0.08], [0.12, 0, -0.16]);
+    addMesh(head, "BackWetHair", ellipsoid(0.26, 0.6, 0.08, 18, 16), mats.hair, [0, -0.15, -0.18], [0.12, 0, 0]);
   } else if (def.hair === "spikes") {
     for (let i = -2; i <= 2; i += 1) {
       addMesh(head, `HairSpike_${i + 2}`, new THREE.ConeGeometry(0.045, 0.22, 7), mats.hair, [i * 0.056, 0.34 + Math.abs(i) * 0.015, 0.035], [0.42 - Math.abs(i) * 0.05, 0, -i * 0.16]);
     }
   } else if (def.hair === "quiff") {
-    addMesh(head, "QuiffFront", roundedBox(0.2, 0.1, 0.15, 0.035), mats.hair, [0, 0.23, 0.1], [-0.28, 0, 0]);
-    addMesh(head, "SideburnLeft", roundedBox(0.09, 0.2, 0.035, 0.014), mats.hair, [-0.19, 0.02, 0.02], [0, 0, 0.1]);
-    addMesh(head, "SideburnRight", roundedBox(0.09, 0.2, 0.035, 0.014), mats.hair, [0.19, 0.02, 0.02], [0, 0, -0.1]);
+    addMesh(head, "QuiffFront", ellipsoid(0.22, 0.12, 0.16, 16, 10), mats.hair, [0, 0.23, 0.11], [-0.28, 0, 0]);
+    addMesh(head, "SideburnLeft", ellipsoid(0.075, 0.22, 0.04, 12, 10), mats.hair, [-0.19, 0.02, 0.03], [0, 0, 0.1]);
+    addMesh(head, "SideburnRight", ellipsoid(0.075, 0.22, 0.04, 12, 10), mats.hair, [0.19, 0.02, 0.03], [0, 0, -0.1]);
   } else if (def.hair === "slick") {
     cap.scale.set(1.05, 0.42, 0.9);
     addMesh(head, "SlickPart", roundedBox(0.02, 0.23, 0.035, 0.008), mats.skin, [-0.07, 0.19, 0.08], [-0.15, 0, -0.12]);
@@ -290,21 +304,21 @@ function addHair(def, head, mats) {
 
 function addLimbMeshes(def, bones, mats) {
   const shoulderMat = def.build === "hero" ? mats.jacket : mats.jacket;
-  addMesh(bones.leftArm, "LeftShoulderPad", roundedBox(0.33, 0.14, 0.38, 0.055), shoulderMat, [-0.02, -0.05, 0.02], [0, 0, -0.1]);
-  addMesh(bones.rightArm, "RightShoulderPad", roundedBox(0.33, 0.14, 0.38, 0.055), shoulderMat, [0.02, -0.05, 0.02], [0, 0, 0.1]);
-  addMesh(bones.leftArm, "LeftUpperArmMesh", new THREE.CapsuleGeometry(0.08, 0.34, 6, 12), mats.jacket, [0, -0.2, 0.04], [0.08, 0, -0.08]);
-  addMesh(bones.rightArm, "RightUpperArmMesh", new THREE.CapsuleGeometry(0.08, 0.34, 6, 12), mats.jacket, [0, -0.2, 0.04], [0.08, 0, 0.08]);
-  addMesh(bones.leftForeArm, "LeftForeArmMesh", new THREE.CapsuleGeometry(0.075, 0.32, 6, 12), mats.jacketDark, [0, -0.16, 0.04], [0.02, 0, -0.05]);
-  addMesh(bones.rightForeArm, "RightForeArmMesh", new THREE.CapsuleGeometry(0.075, 0.32, 6, 12), mats.jacketDark, [0, -0.16, 0.04], [0.02, 0, 0.05]);
-  addMesh(bones.leftHand, "LeftHandMesh", roundedBox(0.14, 0.12, 0.16, 0.04), mats.skin, [0, -0.04, 0.05]);
-  addMesh(bones.rightHand, "RightHandMesh", roundedBox(0.14, 0.12, 0.16, 0.04), mats.skin, [0, -0.04, 0.05]);
+  addMesh(bones.leftArm, "LeftShoulderPad", ellipsoid(0.24, 0.13, 0.3, 18, 10), shoulderMat, [-0.01, -0.04, 0.02], [0, 0, -0.08]);
+  addMesh(bones.rightArm, "RightShoulderPad", ellipsoid(0.24, 0.13, 0.3, 18, 10), shoulderMat, [0.01, -0.04, 0.02], [0, 0, 0.08]);
+  addMesh(bones.leftArm, "LeftUpperArmMesh", new THREE.CapsuleGeometry(0.072, 0.36, 8, 18), mats.jacket, [0, -0.2, 0.04], [0.08, 0, -0.06]);
+  addMesh(bones.rightArm, "RightUpperArmMesh", new THREE.CapsuleGeometry(0.072, 0.36, 8, 18), mats.jacket, [0, -0.2, 0.04], [0.08, 0, 0.06]);
+  addMesh(bones.leftForeArm, "LeftForeArmMesh", new THREE.CapsuleGeometry(0.066, 0.34, 8, 18), mats.jacketDark, [0, -0.16, 0.04], [0.02, 0, -0.04]);
+  addMesh(bones.rightForeArm, "RightForeArmMesh", new THREE.CapsuleGeometry(0.066, 0.34, 8, 18), mats.jacketDark, [0, -0.16, 0.04], [0.02, 0, 0.04]);
+  addMesh(bones.leftHand, "LeftHandMesh", ellipsoid(0.14, 0.12, 0.17, 16, 10), mats.skin, [0, -0.04, 0.05]);
+  addMesh(bones.rightHand, "RightHandMesh", ellipsoid(0.14, 0.12, 0.17, 16, 10), mats.skin, [0, -0.04, 0.05]);
 
-  addMesh(bones.leftUpLeg, "LeftThighMesh", new THREE.CapsuleGeometry(0.1, 0.4, 6, 12), mats.pants, [0, -0.23, 0.04], [0.02, 0, 0.03]);
-  addMesh(bones.rightUpLeg, "RightThighMesh", new THREE.CapsuleGeometry(0.1, 0.4, 6, 12), mats.pants, [0, -0.23, 0.04], [0.02, 0, -0.03]);
-  addMesh(bones.leftLeg, "LeftShinMesh", new THREE.CapsuleGeometry(0.09, 0.36, 6, 12), mats.pants, [0, -0.2, 0.04], [0.02, 0, 0.02]);
-  addMesh(bones.rightLeg, "RightShinMesh", new THREE.CapsuleGeometry(0.09, 0.36, 6, 12), mats.pants, [0, -0.2, 0.04], [0.02, 0, -0.02]);
-  addMesh(bones.leftFoot, "LeftBootMesh", roundedBox(0.2, 0.12, 0.34, 0.05), mats.boots, [0, -0.04, 0.12]);
-  addMesh(bones.rightFoot, "RightBootMesh", roundedBox(0.2, 0.12, 0.34, 0.05), mats.boots, [0, -0.04, 0.12]);
+  addMesh(bones.leftUpLeg, "LeftThighMesh", new THREE.CapsuleGeometry(0.1, 0.42, 8, 18), mats.pants, [0, -0.23, 0.04], [0.02, 0, 0.03]);
+  addMesh(bones.rightUpLeg, "RightThighMesh", new THREE.CapsuleGeometry(0.1, 0.42, 8, 18), mats.pants, [0, -0.23, 0.04], [0.02, 0, -0.03]);
+  addMesh(bones.leftLeg, "LeftShinMesh", new THREE.CapsuleGeometry(0.088, 0.38, 8, 18), mats.pants, [0, -0.2, 0.04], [0.02, 0, 0.02]);
+  addMesh(bones.rightLeg, "RightShinMesh", new THREE.CapsuleGeometry(0.088, 0.38, 8, 18), mats.pants, [0, -0.2, 0.04], [0.02, 0, -0.02]);
+  addMesh(bones.leftFoot, "LeftBootMesh", ellipsoid(0.22, 0.12, 0.36, 18, 10), mats.boots, [0, -0.04, 0.12]);
+  addMesh(bones.rightFoot, "RightBootMesh", ellipsoid(0.22, 0.12, 0.36, 18, 10), mats.boots, [0, -0.04, 0.12]);
 }
 
 function addWeapon(def, hand, mats) {

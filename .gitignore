@@ -1,6 +1,7 @@
 node_modules/
 dist/
 artifacts/
+qa-artifacts/
 .npm-cache/
 .venv/
 .DS_Store

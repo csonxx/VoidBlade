@@ -117,24 +117,28 @@ const enemyCharacterAssetCycle = ["enemyRedFloral", "enemyPurpleKnife", "enemyWh
 const characterAssetRegistry = {
   heroRaincoat: {
     url: heroRaincoatAssetUrl,
+    externalCandidates: ["/characters/hero.glb", "/characters/hero/scene.gltf"],
     desiredHeight: 2.16,
     rootYaw: 0,
     roleLabel: "player",
   },
   enemyRedFloral: {
     url: enemyRedFloralAssetUrl,
+    externalCandidates: ["/characters/enemy-01.glb", "/characters/enemy-01/scene.gltf"],
     desiredHeight: 1.98,
     rootYaw: 0,
     roleLabel: "enemy",
   },
   enemyPurpleKnife: {
     url: enemyPurpleKnifeAssetUrl,
+    externalCandidates: ["/characters/enemy-02.glb", "/characters/enemy-02/scene.gltf"],
     desiredHeight: 1.94,
     rootYaw: 0,
     roleLabel: "enemy",
   },
   enemyWhiteBoss: {
     url: enemyWhiteBossAssetUrl,
+    externalCandidates: ["/characters/enemy-03.glb", "/characters/enemy-03/scene.gltf"],
     desiredHeight: 2.08,
     rootYaw: 0,
     roleLabel: "enemy",
@@ -751,9 +755,114 @@ function loadCharacterAsset(assetKey) {
   const asset = characterAssetRegistry[assetKey];
   if (!asset) throw new Error(`Unknown character asset: ${assetKey}`);
   if (!characterAssetPromises.has(assetKey)) {
-    characterAssetPromises.set(assetKey, gltfLoader.loadAsync(asset.url));
+    characterAssetPromises.set(assetKey, loadCharacterAssetWithFallback(assetKey, asset));
   }
   return characterAssetPromises.get(assetKey);
+}
+
+async function loadCharacterAssetWithFallback(assetKey, asset) {
+  for (const candidateUrl of asset.externalCandidates ?? []) {
+    if (!(await externalCharacterAssetExists(candidateUrl))) continue;
+    try {
+      const gltf = await gltfLoader.loadAsync(candidateUrl);
+      gltf.userData = { ...(gltf.userData ?? {}), sourceUrl: candidateUrl, externalAsset: true };
+      console.info(`Loaded external character asset for ${assetKey}: ${candidateUrl}`);
+      return gltf;
+    } catch (error) {
+      console.warn(`External character asset failed for ${assetKey}: ${candidateUrl}`, error);
+    }
+  }
+
+  const gltf = await gltfLoader.loadAsync(asset.url);
+  gltf.userData = { ...(gltf.userData ?? {}), sourceUrl: asset.url, externalAsset: false };
+  return gltf;
+}
+
+async function externalCharacterAssetExists(url) {
+  try {
+    const head = await fetch(url, { method: "HEAD", cache: "no-store" });
+    if (head.ok) return responseLooksLikeCharacterAsset(head, url);
+    if (head.status !== 405) return false;
+  } catch {
+    return false;
+  }
+
+  try {
+    const probe = await fetch(url, {
+      method: "GET",
+      headers: { Range: "bytes=0-15" },
+      cache: "no-store",
+    });
+    return probe.ok && responseLooksLikeCharacterAsset(probe, url);
+  } catch {
+    return false;
+  }
+}
+
+function responseLooksLikeCharacterAsset(response, url) {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (/text\/html/i.test(contentType)) return false;
+  if (/\.glb($|\?)/i.test(url)) return /model\/gltf-binary|application\/octet-stream|binary|^$/i.test(contentType);
+  if (/\.gltf($|\?)/i.test(url)) return /model\/gltf\+json|application\/json|text\/plain|^$/i.test(contentType);
+  return true;
+}
+
+function normalizeActionKey(name) {
+  return `${name ?? ""}`.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function addActionAlias(actions, alias, action) {
+  if (!alias) return;
+  actions[alias] = action;
+  actions[alias.toLowerCase()] = action;
+  actions[normalizeActionKey(alias)] = action;
+}
+
+function indexActorAction(actions, clipName, action) {
+  const normalized = normalizeActionKey(clipName);
+  const aliases = new Set([clipName]);
+
+  if (/idle|stand|breath|tpose|apose/.test(normalized)) aliases.add("Idle");
+  if (/walk|strafe/.test(normalized)) aliases.add("Walk");
+  if (/run|sprint|jog/.test(normalized)) aliases.add("Run");
+  if (/jump|vault|fall/.test(normalized)) aliases.add("Jump");
+  if (/hit|hurt|damage|impact|reaction/.test(normalized)) aliases.add("Hit");
+  if (/death|die|dying|knockdown|collapse/.test(normalized)) aliases.add("Death");
+  if (/attack|punch|kick|jab|hook|slash|sword|katana|blade|knife|melee|strike/.test(normalized)) {
+    aliases.add("Attack_Light");
+  }
+  if (/heavy|power|haymaker|smash|finisher|combo/.test(normalized)) aliases.add("Attack_Heavy");
+  if (/dash|lunge|charge/.test(normalized)) aliases.add("Skill_1");
+  if (/spin|whirl|roundhouse|cyclone|turn/.test(normalized)) aliases.add("Skill_2");
+  if (/upper|launcher|slam|leap|air/.test(normalized)) aliases.add("Skill_3");
+
+  for (const alias of aliases) addActionAlias(actions, alias, action);
+}
+
+function findActorAction(actor, actionName) {
+  const canonical = actionName === "Attack" ? "Attack_Light" : actionName;
+  const lookup = new Set([canonical, canonical.toLowerCase(), normalizeActionKey(canonical)]);
+
+  if (canonical === "Attack_Heavy") {
+    lookup.add("Attack_Light");
+    lookup.add("attacklight");
+  } else if (/^Skill_/.test(canonical)) {
+    lookup.add("Attack_Heavy");
+    lookup.add("attackheavy");
+    lookup.add("Attack_Light");
+    lookup.add("attacklight");
+  } else if (canonical === "Jump") {
+    lookup.add("Run");
+    lookup.add("run");
+  }
+
+  for (const key of lookup) {
+    if (actor.actions[key]) return actor.actions[key];
+  }
+
+  return actor.actions.Idle
+    || actor.actions.idle
+    || Object.values(actor.actions)[0];
 }
 
 const skillDefinitions = [
@@ -3437,9 +3546,7 @@ async function attachRiggedActor(actor, options) {
     const actions = {};
     for (const clip of gltf.animations) {
       const action = mixer.clipAction(clip);
-      actions[clip.name] = action;
-      actions[clip.name.toLowerCase()] = action;
-      actions[clip.name.charAt(0).toUpperCase() + clip.name.slice(1)] = action;
+      indexActorAction(actions, clip.name, action);
     }
 
     actor.group.add(root);
@@ -3962,11 +4069,7 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
 function setActorAction(actor, actionName, fade = 0.18) {
   if (!actor.actions) return;
   const normalizedName = actionName === "Attack" ? "Attack_Light" : actionName;
-  const next = actor.actions[normalizedName]
-    || actor.actions[normalizedName.toLowerCase()]
-    || actor.actions.Idle
-    || actor.actions.idle
-    || Object.values(actor.actions)[0];
+  const next = findActorAction(actor, normalizedName);
   if (!next || actor.currentAction === next) return;
 
   const oneShot = /^(Attack_|Skill_|Hit|Death|Jump)/.test(normalizedName);

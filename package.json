@@ -6,12 +6,19 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "asset:report": "node scripts/real-character-assets.mjs report",
+    "asset:install": "node scripts/real-character-assets.mjs install",
+    "asset:fetch": "node scripts/real-character-assets.mjs fetch-url",
+    "asset:rpm": "node scripts/real-character-assets.mjs fetch-rpm",
+    "asset:meshy": "node scripts/real-character-assets.mjs meshy",
+    "qa:firefox": "node scripts/qa-firefox-smoke.mjs"
   },
   "dependencies": {
     "three": "^0.165.0"
   },
   "devDependencies": {
+    "playwright": "^1.59.1",
     "vite": "^6.4.2"
   }
 }
