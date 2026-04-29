@@ -30,7 +30,7 @@ const renderSettings = {
   maxPixelRatio: window.innerWidth < 760 ? 0.66 : 0.62,
   realtimeShadows: false,
   maxScenePointLights: window.innerWidth < 760 ? 4 : 7,
-  maxRiggedEnemies: window.innerWidth < 760 ? 1 : 3,
+  maxRiggedEnemies: window.innerWidth < 760 ? 4 : 8,
 };
 
 const renderer = new THREE.WebGLRenderer({
@@ -2830,14 +2830,17 @@ async function attachRiggedActor(actor, options) {
     actor.gltfBasePosition = root.position.clone();
     actor.gltfBaseRotation = root.rotation.clone();
     actor.rigBones = rigBones;
-    const keepLocalModelVisible = options.role === "enemy";
-    root.visible = !keepLocalModelVisible;
-    actor.model.visible = keepLocalModelVisible ? visualMode.actors3D : false;
+    root.visible = true;
+    actor.model.visible = false;
     actor.billboard.group.visible = false;
     setActorAction(actor, "Idle", 0);
     animatedActors.push(actor);
   } catch (error) {
     console.warn("Rigged actor model failed to load", error);
+    if (options.role === "enemy") {
+      actor.model.visible = visualMode.actors3D;
+      actor.billboard.group.visible = !visualMode.actors3D;
+    }
   }
 }
 
@@ -4585,7 +4588,7 @@ function createEnemy(x, z, level) {
   const billboard = { group: new THREE.Group(), main: null };
   group.add(billboard.group);
   billboard.group.visible = !visualMode.actors3D;
-  model.visible = visualMode.actors3D;
+  model.visible = visualMode.actors3D && !shouldRig;
   const contactShadow = createContactShadow(0.78, 0.38, 0.18);
   group.add(contactShadow);
 
