@@ -2885,15 +2885,18 @@ async function attachRiggedActor(actor, options) {
         : node.material.clone();
 
       const materialsToTune = Array.isArray(node.material) ? node.material : [node.material];
+      const isJointMesh = /joint/i.test(node.name) || materialsToTune.some((material) => /joint/i.test(material.name ?? ""));
       for (const material of materialsToTune) {
-        if (material.color) material.color.setHex(rootBodyColor);
+        if (material.color) material.color.setHex(isJointMesh ? (palette.skinColor ?? 0x6a4d3a) : rootBodyColor);
         if ("map" in material) {
-          material.map = rootPatternTexture ?? actorCharacterTexture(palette.gltfPanel);
+          material.map = isJointMesh
+            ? identityCharacterTexture(palette.identitySkinPanel ?? characterIdentityPanels.skinWarm)
+            : rootPatternTexture ?? actorCharacterTexture(palette.gltfPanel);
           material.needsUpdate = true;
         }
-        if ("roughness" in material) material.roughness = palette.gltfRoughness ?? (options.role === "player" ? 0.22 : 0.32);
-        if ("metalness" in material) material.metalness = palette.gltfMetalness ?? (options.role === "player" ? 0.44 : 0.48);
-        if ("envMapIntensity" in material) material.envMapIntensity = palette.gltfEnv ?? (options.role === "player" ? 1.34 : 1.12);
+        if ("roughness" in material) material.roughness = isJointMesh ? 0.56 : palette.gltfRoughness ?? (options.role === "player" ? 0.22 : 0.32);
+        if ("metalness" in material) material.metalness = isJointMesh ? 0.04 : palette.gltfMetalness ?? (options.role === "player" ? 0.44 : 0.48);
+        if ("envMapIntensity" in material) material.envMapIntensity = isJointMesh ? 0.72 : palette.gltfEnv ?? (options.role === "player" ? 1.34 : 1.12);
         if (material.emissive) material.emissive.copy(accent).multiplyScalar(palette.gltfEmissiveBoost ?? 0.07);
         rigMaterials.push(material);
       }
@@ -3075,6 +3078,20 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     metalness: 0.04,
     envMapIntensity: 0.76,
   });
+  const pants = new THREE.MeshStandardMaterial({
+    color: palette.pantsColor ?? palette.deepCoatColor ?? 0x111111,
+    map: actorCharacterTexture(palette.deepCoatPanel ?? characterCinematicPanels.meshSuit),
+    roughness: 0.54,
+    metalness: 0.08,
+    envMapIntensity: 0.78,
+  });
+  const wetBoot = new THREE.MeshStandardMaterial({
+    color: palette.bootColor ?? palette.rubberColor ?? 0x080808,
+    map: identityCharacterTexture(characterIdentityPanels.wetBoot),
+    roughness: 0.34,
+    metalness: 0.18,
+    envMapIntensity: 1.05,
+  });
   const tattooSkin = new THREE.MeshStandardMaterial({
     color: palette.skinColor ?? 0x6a4d3a,
     map: identityCharacterTexture(palette.tattooPanel ?? characterIdentityPanels.tattooSkin),
@@ -3130,6 +3147,10 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     add(roundedBox(0.58, 0.09, 0.065, 0.025), harness, [0, 0.92, 0.48], [-0.04, 0, 0]);
     add(roundedBox(0.13, 0.62, 0.038, 0.017), neon, [-0.16, 1.2, 0.54], [-0.08, 0, -0.05]);
     add(roundedBox(0.13, 0.62, 0.038, 0.017), neonSecondary, [0.16, 1.2, 0.54], [-0.08, 0, 0.05]);
+    addMirrored(new THREE.CapsuleGeometry(0.075, 0.42, 5, 12), coat, 0.6, 1.1, 0.19, [0.16, 0, 0.16]);
+    addMirrored(roundedBox(0.17, 0.18, 0.16, 0.045), rubber, 0.65, 0.84, 0.2, [0.08, 0, 0.08]);
+    addMirrored(new THREE.CapsuleGeometry(0.085, 0.48, 5, 12), pants, 0.2, 0.48, 0.12, [0.04, 0, 0.04]);
+    addMirrored(roundedBox(0.24, 0.16, 0.42, 0.055), wetBoot, 0.19, 0.14, 0.18, [0, 0, 0.02]);
 
     const weapon = new THREE.Group();
     const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 10), metal);
@@ -3193,6 +3214,20 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
       add(roundedBox(0.2, 0.11, 0.16, 0.035), identityHair, [0, 2.07, 0.12], [-0.28, 0, 0]);
       add(roundedBox(0.11, 0.24, 0.045, 0.018), identityHair, [-0.17, 1.88, 0.04], [0.02, 0, 0.14]);
       add(roundedBox(0.11, 0.24, 0.045, 0.018), identityHair, [0.17, 1.88, 0.04], [0.02, 0, -0.14]);
+    } else if (palette.hairShape === "shortUndercut") {
+      hairCap.scale.set(0.98, 0.42, 0.86);
+      add(roundedBox(0.2, 0.08, 0.14, 0.03), identityHair, [0, 2.06, 0.1], [-0.22, 0, 0]);
+      add(roundedBox(0.08, 0.2, 0.035, 0.014), identitySkin, [-0.2, 1.89, 0.03], [0.02, 0, 0.12]);
+      add(roundedBox(0.08, 0.2, 0.035, 0.014), identitySkin, [0.2, 1.89, 0.03], [0.02, 0, -0.12]);
+    } else if (palette.hairShape === "shortMessy") {
+      hairCap.scale.set(0.96, 0.46, 0.86);
+      for (let i = -1; i <= 1; i += 1) {
+        add(new THREE.ConeGeometry(0.04, 0.16, 6), identityHair, [i * 0.07, 2.12, 0.07], [0.28, 0, -i * 0.12]);
+      }
+    } else if (palette.hairShape === "slickPart") {
+      hairCap.scale.set(1.02, 0.42, 0.9);
+      add(roundedBox(0.018, 0.2, 0.035, 0.008), identitySkin, [-0.07, 2.03, 0.09], [-0.16, 0, -0.1]);
+      add(roundedBox(0.18, 0.08, 0.12, 0.026), identityHair, [0.08, 2.07, 0.1], [-0.22, 0, 0.08]);
     } else if (palette.hairShape === "shavedMohawk") {
       hairCap.scale.set(0.56, 0.28, 0.72);
       add(roundedBox(0.09, 0.3, 0.095, 0.03), identityHair, [0, 2.04, 0.02], [-0.14, 0, 0]);
@@ -3208,6 +3243,7 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     add(roundedBox(0.18, 0.055, 0.045, 0.018), identityEyewear, [0.21, 1.88, 0.24]);
 
     add(roundedBox(0.48, 0.58, 0.055, 0.04), undershirt, [0, 1.25, 0.43], [-0.08, 0, 0]);
+    add(roundedBox(style === "constructionHeavy" || style === "leopardBruiser" || style === "goldBoss" ? 0.62 : 0.54, 0.58, 0.055, 0.04), coat, [0, 1.27, 0.39], [-0.08, 0, 0]);
     add(roundedBox(0.24, 0.66, 0.055, 0.035), coat, [-0.23, 1.21, 0.45], [-0.08, 0.05, 0.11], { sway: true });
     add(roundedBox(0.24, 0.66, 0.055, 0.035), coat, [0.23, 1.21, 0.45], [-0.08, -0.05, -0.11], { sway: true });
     add(roundedBox(0.5, 0.74, 0.055, 0.04), coat, [0, 1.13, -0.36], [0.1, 0, 0], { sway: true });
@@ -3255,6 +3291,7 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
     kit.add(waistChain);
 
     addMirrored(roundedBox(0.24, 0.12, 0.42, 0.055), coat, 0.47, 1.5, 0.02, [0, 0, 0.12]);
+    addMirrored(roundedBox(style === "constructionHeavy" || style === "leopardBruiser" ? 0.42 : 0.34, 0.16, 0.52, 0.065), coat, 0.5, 1.48, 0.02, [0, 0, 0.16]);
     addMirrored(roundedBox(0.12, 0.38, 0.09, 0.035), harness, 0.61, 1.1, 0.18, [0.14, 0, 0.14]);
     addMirrored(roundedBox(0.16, 0.12, 0.18, 0.035), rubber, 0.66, 0.82, 0.18, [0.05, 0, 0.08]);
     addMirrored(roundedBox(0.06, 0.38, 0.055, 0.018), decals, 0.62, 1.07, 0.24, [0.12, 0, 0.12]);
@@ -3268,8 +3305,8 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
       add(roundedBox(0.14, 0.42, 0.04, 0.016), tape, [0.14, 1.23, 0.54], [-0.08, 0, 0.07]);
     }
 
-    addMirrored(roundedBox(0.14, 0.42, 0.08, 0.035), deepCoat, 0.2, 0.48, 0.16, [0.04, 0, 0.04]);
-    addMirrored(roundedBox(0.23, 0.15, 0.42, 0.055), rubber, 0.2, 0.14, 0.18, [0, 0, 0.02]);
+    addMirrored(roundedBox(0.16, 0.46, 0.09, 0.035), pants, 0.2, 0.48, 0.16, [0.04, 0, 0.04]);
+    addMirrored(roundedBox(0.23, 0.15, 0.42, 0.055), wetBoot, 0.2, 0.14, 0.18, [0, 0, 0.02]);
     add(roundedBox(0.76, 0.08, 0.085, 0.028), harness, [0, 0.84, 0.42], [-0.04, 0, 0]);
 
     const weapon = new THREE.Group();
