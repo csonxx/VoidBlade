@@ -2830,7 +2830,9 @@ async function attachRiggedActor(actor, options) {
     actor.gltfBasePosition = root.position.clone();
     actor.gltfBaseRotation = root.rotation.clone();
     actor.rigBones = rigBones;
-    actor.model.visible = false;
+    const keepLocalModelVisible = options.role === "enemy";
+    root.visible = !keepLocalModelVisible;
+    actor.model.visible = keepLocalModelVisible ? visualMode.actors3D : false;
     actor.billboard.group.visible = false;
     setActorAction(actor, "Idle", 0);
     animatedActors.push(actor);
@@ -4315,6 +4317,7 @@ function createEnemy(x, z, level) {
   group.position.set(x, 0, z);
   const shouldRig = enemies.filter((enemy) => enemy.useRig && !enemy.dead).length < renderSettings.maxRiggedEnemies;
   const palette = getEnemyWavePalette(level);
+  const style = palette.style ?? "street";
   const visualScale = palette.visualScale ?? 1;
   group.scale.setScalar(visualScale);
 
@@ -4326,6 +4329,13 @@ function createEnemy(x, z, level) {
   bodyMaterial.map = actorCharacterTexture(palette.coatPanel ?? characterCinematicPanels.tacticalFabric);
   bodyMaterial.emissive = new THREE.Color(palette.emissive);
   bodyMaterial.emissiveIntensity = 0.06;
+  const patternTexture = palette.pattern && palette.pattern !== "plain"
+    ? streetPatternTexture(palette.pattern, palette.coatColor, palette.accent, palette.secondaryAccent)
+    : null;
+  if (patternTexture) {
+    bodyMaterial.map = patternTexture;
+    bodyMaterial.needsUpdate = true;
+  }
   const jacketMaterial = new THREE.MeshStandardMaterial({
     color: palette.jacketColor,
     map: actorCharacterTexture(palette.coatPanel ?? characterCinematicPanels.tacticalFabric),
@@ -4333,12 +4343,23 @@ function createEnemy(x, z, level) {
     metalness: 0.18,
     envMapIntensity: 0.86,
   });
+  if (patternTexture) {
+    jacketMaterial.map = patternTexture;
+    jacketMaterial.needsUpdate = true;
+  }
   const pantsMaterial = new THREE.MeshStandardMaterial({
     color: palette.pantsColor,
     map: actorCharacterTexture(palette.deepCoatPanel ?? characterCinematicPanels.meshSuit),
     roughness: 0.56,
     metalness: 0.12,
   });
+  if (style === "denimLeader" || style === "denimFighter") {
+    const denimTexture = streetPatternTexture("denim", palette.jacketColor, palette.accent, palette.secondaryAccent);
+    jacketMaterial.map = denimTexture;
+    pantsMaterial.map = denimTexture;
+    jacketMaterial.needsUpdate = true;
+    pantsMaterial.needsUpdate = true;
+  }
   const bootMaterial = new THREE.MeshStandardMaterial({
     color: palette.bootColor,
     map: actorCharacterTexture(palette.rubberPanel ?? characterCinematicPanels.boots),
@@ -4354,11 +4375,42 @@ function createEnemy(x, z, level) {
     emissive: palette.emissive,
     emissiveIntensity: 0.12,
   });
+  const shirtMaterial = new THREE.MeshStandardMaterial({
+    color: palette.deepCoatColor,
+    map: patternTexture && (style === "floralBrawler" || style === "leopardBruiser" || style === "goldBoss")
+      ? patternTexture
+      : actorCharacterTexture(palette.deepCoatPanel ?? characterCinematicPanels.meshSuit),
+    roughness: 0.54,
+    metalness: 0.08,
+    envMapIntensity: 0.82,
+    emissive: palette.emissive,
+    emissiveIntensity: 0.05,
+  });
+  const hairMaterial = new THREE.MeshStandardMaterial({
+    color: palette.hairColor ?? 0x14100e,
+    roughness: 0.58,
+    metalness: 0.06,
+    envMapIntensity: 0.55,
+  });
+  const sunglassMaterial = new THREE.MeshStandardMaterial({
+    color: style === "whiteSuit" ? 0x070707 : 0x0c1012,
+    roughness: 0.18,
+    metalness: 0.48,
+    envMapIntensity: 1.26,
+    emissive: palette.accent,
+    emissiveIntensity: style === "constructionHeavy" ? 0.55 : 0.16,
+  });
+  const tapeMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf2ede0,
+    roughness: 0.72,
+    metalness: 0.04,
+    envMapIntensity: 0.68,
+  });
   const skinMaterial = new THREE.MeshStandardMaterial({
     color: palette.skinColor,
-    map: cinematicCharacterTexture(characterCinematicPanels.helmet),
-    roughness: 0.28,
-    metalness: 0.42,
+    roughness: 0.54,
+    metalness: 0.04,
+    envMapIntensity: 0.62,
   });
   const enemyAccent = materials.enemyAccent.clone();
   enemyAccent.color.setHex(palette.accent);
@@ -4377,18 +4429,87 @@ function createEnemy(x, z, level) {
   const chestArmor = makePart(model, roundedBox(0.54, 0.48, 0.085, 0.055), armorMaterial, [0, 1.27, 0.41], [-0.08, 0, 0]);
   const gangStripe = makePart(model, roundedBox(0.08, 0.46, 0.04, 0.018), enemyAccent, [-0.18, 1.23, 0.4]);
   gangStripe.castShadow = false;
+  const shirtFront = makePart(model, roundedBox(0.46, 0.5, 0.055, 0.035), shirtMaterial, [0, 1.24, 0.47], [-0.08, 0, 0]);
+  shirtFront.castShadow = false;
+  const lapelL = makePart(model, roundedBox(0.13, 0.52, 0.052, 0.022), jacketMaterial, [-0.18, 1.22, 0.5], [-0.08, 0, -0.2]);
+  const lapelR = makePart(model, roundedBox(0.13, 0.52, 0.052, 0.022), jacketMaterial, [0.18, 1.22, 0.5], [-0.08, 0, 0.2]);
+  const streetClothCut = style !== "constructionHeavy";
+  if (streetClothCut) {
+    chestArmor.visible = false;
+    gangStripe.scale.y = 0.72;
+    gangStripe.position.x = style === "whiteSuit" ? 0 : -0.26;
+  }
+  if (style === "whiteSuit") {
+    lapelL.material = shirtMaterial;
+    lapelR.material = shirtMaterial;
+    makePart(model, roundedBox(0.08, 0.46, 0.045, 0.016), bootMaterial, [0, 1.2, 0.535], [-0.08, 0, 0]);
+    makePart(model, roundedBox(0.22, 0.055, 0.045, 0.014), enemyAccent, [0, 1.5, 0.54], [-0.08, 0, 0]);
+  }
+  if (style === "greenBomber" || style === "pinkBomber") {
+    makePart(model, roundedBox(0.52, 0.065, 0.045, 0.018), enemyAccent, [0, 1.49, 0.54], [-0.08, 0, 0]);
+    makePart(model, roundedBox(0.44, 0.055, 0.042, 0.016), tapeMaterial, [0, 1.38, 0.55], [-0.08, 0, 0]);
+  }
+  if (style === "goldBoss") {
+    for (let i = 0; i < 4; i += 1) {
+      const y = 1.02 + i * 0.13;
+      makePart(model, roundedBox(0.34 - i * 0.025, 0.025, 0.048, 0.01), enemyAccent, [0, y, 0.545], [-0.08, 0, 0]);
+    }
+  }
+  if (style === "denimFighter" || style === "denimLeader") {
+    makePart(model, roundedBox(0.52, 0.06, 0.045, 0.016), tapeMaterial, [0, 1.5, 0.535], [-0.08, 0, 0]);
+    makePart(model, roundedBox(0.34, 0.05, 0.045, 0.014), tapeMaterial, [0, 1.05, 0.54], [-0.08, 0, 0]);
+  }
+  if (style === "constructionHeavy") {
+    makePart(model, roundedBox(0.075, 0.72, 0.052, 0.02), enemyAccent, [-0.2, 1.17, 0.52], [-0.08, 0, -0.18]);
+    makePart(model, roundedBox(0.075, 0.72, 0.052, 0.02), enemyAccent, [0.2, 1.17, 0.52], [-0.08, 0, 0.18]);
+    makePart(model, roundedBox(0.58, 0.06, 0.052, 0.018), enemyAccent, [0, 0.94, 0.51], [-0.04, 0, 0]);
+  }
   const belt = makePart(model, roundedBox(0.78, 0.12, 0.48, 0.045), bootMaterial, [0, 0.78, 0]);
 
   const shoulderL = makePart(model, roundedBox(0.36, 0.18, 0.46, 0.065), armorMaterial, [-0.48, 1.49, 0.02], [0, 0, -0.16]);
   const shoulderR = makePart(model, roundedBox(0.36, 0.18, 0.46, 0.065), armorMaterial, [0.48, 1.49, 0.02], [0, 0, 0.16]);
-  shoulderL.material = armorMaterial;
-  shoulderR.material = armorMaterial;
+  shoulderL.material = streetClothCut ? jacketMaterial : armorMaterial;
+  shoulderR.material = streetClothCut ? jacketMaterial : armorMaterial;
 
   const head = makePart(model, new THREE.SphereGeometry(0.235, 14, 11), skinMaterial, [0, 1.86, 0.04]);
   head.scale.set(0.92, 1.02, 0.9);
   const mask = makePart(model, roundedBox(0.42, 0.17, 0.08, 0.045), bootMaterial, [0, 1.82, 0.23]);
   const visor = makePart(model, roundedBox(0.34, 0.07, 0.052, 0.025), enemyAccent, [0, 1.91, 0.28]);
+  mask.visible = style === "constructionHeavy";
+  visor.material = sunglassMaterial;
+  visor.scale.set(style === "constructionHeavy" ? 1.05 : 0.92, style === "constructionHeavy" ? 1 : 0.68, 0.86);
   visor.castShadow = false;
+  const hairCap = makePart(
+    model,
+    new THREE.SphereGeometry(0.25, 18, 9, 0, Math.PI * 2, 0, Math.PI * 0.56),
+    hairMaterial,
+    [0, 1.99, 0.02],
+    [0.02, 0, 0],
+  );
+  hairCap.scale.set(0.94, 0.54, 0.92);
+  if (style === "constructionHeavy") {
+    hairCap.visible = false;
+    const hardHat = makePart(model, new THREE.SphereGeometry(0.27, 18, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), enemyAccent, [0, 2.0, 0.02]);
+    hardHat.scale.set(1.04, 0.42, 0.94);
+    makePart(model, roundedBox(0.54, 0.045, 0.24, 0.018), enemyAccent, [0, 1.96, 0.14]);
+  } else if (style === "denimLeader") {
+    makePart(model, roundedBox(0.13, 0.5, 0.07, 0.03), hairMaterial, [-0.23, 1.72, -0.03], [0.08, 0, 0.18]);
+    makePart(model, roundedBox(0.13, 0.5, 0.07, 0.03), hairMaterial, [0.23, 1.72, -0.03], [0.08, 0, -0.18]);
+    makePart(model, roundedBox(0.24, 0.48, 0.06, 0.028), hairMaterial, [0, 1.69, -0.15], [0.1, 0, 0]);
+  } else if (style === "purpleKnife" || style === "pinkBomber") {
+    for (let i = -2; i <= 2; i += 1) {
+      makePart(
+        model,
+        new THREE.ConeGeometry(0.045, 0.2, 6),
+        hairMaterial,
+        [i * 0.055, 2.11 + Math.abs(i) * 0.012, 0.03],
+        [0.4 - Math.abs(i) * 0.07, 0, -i * 0.14],
+      );
+    }
+  } else if (style === "whiteSuit" || style === "goldBoss") {
+    makePart(model, roundedBox(0.12, 0.18, 0.055, 0.02), hairMaterial, [-0.18, 1.9, 0.03], [0.02, 0, 0.16]);
+    makePart(model, roundedBox(0.12, 0.18, 0.055, 0.02), hairMaterial, [0.18, 1.9, 0.03], [0.02, 0, -0.16]);
+  }
 
   const armL = makePart(model, new THREE.CapsuleGeometry(0.085, 0.44, 5, 9), jacketMaterial, [-0.58, 1.12, 0.06], [0.14, 0.02, -0.18]);
   const armR = makePart(model, new THREE.CapsuleGeometry(0.085, 0.44, 5, 9), jacketMaterial, [0.58, 1.12, 0.1], [-0.1, -0.02, 0.18]);
@@ -4396,11 +4517,38 @@ function createEnemy(x, z, level) {
   makePart(model, roundedBox(0.15, 0.42, 0.12, 0.04), armorMaterial, [0.65, 1.08, 0.16], [-0.1, -0.02, 0.12]);
   const gloveL = makePart(model, roundedBox(0.15, 0.15, 0.18, 0.045), bootMaterial, [-0.63, 0.86, 0.16]);
   const gloveR = makePart(model, roundedBox(0.15, 0.15, 0.18, 0.045), bootMaterial, [0.64, 0.88, 0.18]);
+  if (style === "greenBomber" || style === "pinkBomber") {
+    makePart(model, roundedBox(0.17, 0.06, 0.14, 0.018), tapeMaterial, [-0.64, 1.17, 0.24], [0.14, 0.02, -0.12]);
+    makePart(model, roundedBox(0.17, 0.06, 0.14, 0.018), tapeMaterial, [0.64, 1.17, 0.24], [-0.1, -0.02, 0.12]);
+    makePart(model, roundedBox(0.17, 0.055, 0.14, 0.018), enemyAccent, [-0.65, 1.03, 0.24], [0.14, 0.02, -0.12]);
+    makePart(model, roundedBox(0.17, 0.055, 0.14, 0.018), enemyAccent, [0.65, 1.03, 0.24], [-0.1, -0.02, 0.12]);
+  }
+  if (style === "denimFighter") {
+    makePart(model, roundedBox(0.18, 0.13, 0.15, 0.028), tapeMaterial, [-0.64, 0.99, 0.25], [0.14, 0.02, -0.12]);
+    makePart(model, roundedBox(0.18, 0.13, 0.15, 0.028), tapeMaterial, [0.65, 0.99, 0.25], [-0.1, -0.02, 0.12]);
+    gloveL.material = tapeMaterial;
+    gloveR.material = tapeMaterial;
+  }
+  if (style === "floralBrawler" || style === "leopardBruiser" || style === "goldBoss") {
+    const neckChain = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.012, 8, 44, Math.PI * 1.18), enemyAccent);
+    neckChain.position.set(0, 1.58, 0.43);
+    neckChain.rotation.set(0.16, 0, Math.PI * 0.88);
+    neckChain.castShadow = true;
+    model.add(neckChain);
+  }
 
   const legL = makePart(model, new THREE.CapsuleGeometry(0.105, 0.54, 5, 9), pantsMaterial, [-0.17, 0.42, 0.02], [0.03, 0.02, 0.03]);
   const legR = makePart(model, new THREE.CapsuleGeometry(0.105, 0.54, 5, 9), pantsMaterial, [0.17, 0.42, 0.02], [-0.03, -0.02, -0.03]);
   makePart(model, roundedBox(0.18, 0.42, 0.12, 0.045), armorMaterial, [-0.18, 0.45, 0.16], [0.04, 0, 0.03]);
   makePart(model, roundedBox(0.18, 0.42, 0.12, 0.045), armorMaterial, [0.18, 0.45, 0.16], [-0.04, 0, -0.03]);
+  if (style === "whiteSuit") {
+    makePart(model, roundedBox(0.055, 0.46, 0.052, 0.014), bootMaterial, [-0.08, 0.43, 0.23], [0.04, 0, 0.02]);
+    makePart(model, roundedBox(0.055, 0.46, 0.052, 0.014), bootMaterial, [0.08, 0.43, 0.23], [-0.04, 0, -0.02]);
+  }
+  if (style === "greenBomber" || style === "pinkBomber" || style === "denimLeader") {
+    makePart(model, roundedBox(0.12, 0.36, 0.052, 0.018), enemyAccent, [-0.18, 0.43, 0.23], [0.04, 0, 0.03]);
+    makePart(model, roundedBox(0.12, 0.36, 0.052, 0.018), enemyAccent, [0.18, 0.43, 0.23], [-0.04, 0, -0.03]);
+  }
   makePart(model, roundedBox(0.62, 0.62, 0.06, 0.04), jacketMaterial, [0, 0.72, -0.28], [0.14, 0, 0]);
   makePart(model, roundedBox(0.22, 0.16, 0.36, 0.06), bootMaterial, [-0.17, 0.13, 0.1]);
   makePart(model, roundedBox(0.22, 0.16, 0.36, 0.06), bootMaterial, [0.17, 0.13, 0.1]);
@@ -4413,6 +4561,22 @@ function createEnemy(x, z, level) {
   baton.position.set(-0.48, 1.08, 0.2);
   baton.castShadow = true;
   model.add(baton);
+  if (palette.weaponType === "fists") {
+    baton.visible = false;
+  } else if (palette.weaponType === "knife") {
+    baton.scale.y = 0.52;
+    baton.material = new THREE.MeshStandardMaterial({ color: palette.metalColor, roughness: 0.12, metalness: 0.88, envMapIntensity: 1.35 });
+    makePart(model, roundedBox(0.09, 0.06, 0.18, 0.02), bootMaterial, [-0.48, 1.08, -0.18], [Math.PI / 2, 0, 0]);
+  } else if (palette.weaponType === "cane") {
+    baton.scale.y = 1.22;
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 10), enemyAccent);
+    knob.position.set(-0.48, 1.08, 0.82);
+    knob.castShadow = true;
+    model.add(knob);
+  } else if (palette.weaponType === "hammer") {
+    baton.scale.y = 0.82;
+    makePart(model, roundedBox(0.34, 0.16, 0.18, 0.035), armorMaterial, [-0.48, 1.08, 0.66], [0, 0.1, 0.04]);
+  }
 
   const healthBar = createEnemyHealthBar();
   healthBar.fill.material.color.setHex(palette.accent);
