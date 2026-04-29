@@ -617,54 +617,60 @@ function resolveActorPalette(role, level = 1, palette = null) {
 
 const skillDefinitions = [
   {
-    name: "電光穿梭",
-    shortName: "雷突",
+    name: "巷口疾斬",
+    shortName: "巷斬",
     cost: 18,
     cooldown: 3.2,
-    duration: 0.38,
-    hitTime: 0.08,
-    damage: 36,
-    range: 4.9,
-    angle: 1.28,
-    knockback: 8.4,
-    effect: "dash",
-    colorA: 0x2df4ed,
-    colorB: 0xffd76d,
+    duration: 0.42,
+    hitTime: 0.11,
+    damage: 38,
+    range: 5.05,
+    angle: 1.18,
+    knockback: 8.8,
+    effect: "alleyDash",
+    motion: "dash",
+    colorA: 0xffd76d,
+    colorB: 0xff2f6d,
+    waterColor: 0x2df4ed,
     shake: 0.22,
     invulnerable: 0.24,
-    dashSpeed: 15.8,
+    dashSpeed: 16.4,
   },
   {
-    name: "雨刃環斬",
-    shortName: "環斬",
+    name: "招牌回斬",
+    shortName: "招牌",
     cost: 27,
     cooldown: 5.8,
-    duration: 0.58,
-    hitTime: 0.18,
-    damage: 46,
-    radius: 3.35,
-    knockback: 7.2,
-    effect: "ring",
+    duration: 0.64,
+    hitTime: 0.22,
+    damage: 48,
+    radius: 3.45,
+    knockback: 7.6,
+    effect: "signRing",
+    motion: "ring",
     colorA: 0xff2f6d,
-    colorB: 0x2df4ed,
-    shake: 0.3,
-    invulnerable: 0.3,
+    colorB: 0xffd76d,
+    waterColor: 0x2df4ed,
+    shake: 0.32,
+    invulnerable: 0.32,
   },
   {
-    name: "霓虹震地",
-    shortName: "震地",
+    name: "雨街震腳",
+    shortName: "震腳",
     cost: 36,
     cooldown: 8.2,
-    duration: 0.78,
-    hitTime: 0.32,
-    damage: 68,
-    radius: 4.45,
-    knockback: 10.5,
-    effect: "stomp",
+    duration: 0.86,
+    hitTime: 0.36,
+    damage: 70,
+    radius: 4.6,
+    knockback: 11,
+    effect: "streetStomp",
+    motion: "stomp",
     colorA: 0xffd76d,
-    colorB: 0x5cff9d,
-    shake: 0.48,
-    invulnerable: 0.45,
+    colorB: 0x2df4ed,
+    waterColor: 0x9fd7ff,
+    shake: 0.52,
+    invulnerable: 0.48,
     jumpImpulse: 4.5,
   },
 ];
@@ -3276,24 +3282,29 @@ function applyPlayerSkillPose(actor, skill, dt) {
   const progress = clamp(skill.t / skill.def.duration, 0, 1);
   const active = Math.sin(progress * Math.PI);
   const snap = smoothstep01((progress - 0.08) / 0.36) * (1 - smoothstep01((progress - 0.62) / 0.26));
+  const motion = skill.def.motion ?? skill.def.effect;
   const baseRot = actor.gltfBaseRotation ?? { x: 0, y: Math.PI, z: 0 };
   const basePos = actor.gltfBasePosition ?? { x: 0, z: 0 };
-  const dashLean = skill.def.effect === "dash" ? 0.54 : skill.def.effect === "stomp" ? -0.18 : 0.22;
-  const twist = skill.def.effect === "ring" ? Math.sin(progress * Math.PI * 2.2) * 0.58 : snap * 0.34;
+  const dashLean = motion === "dash" ? 0.66 : motion === "stomp" ? -0.26 : 0.18;
+  const twist = motion === "ring" ? Math.sin(progress * Math.PI * 2.45) * 0.66 : snap * 0.38;
+  const streetRecoil = motion === "stomp" ? smoothstep01((progress - 0.28) / 0.18) * (1 - smoothstep01((progress - 0.62) / 0.22)) : 0;
   actor.gltfRoot.rotation.x = damp(actor.gltfRoot.rotation.x, baseRot.x - dashLean * active, 24, dt);
   actor.gltfRoot.rotation.y = damp(actor.gltfRoot.rotation.y, baseRot.y + twist, 24, dt);
-  actor.gltfRoot.rotation.z = damp(actor.gltfRoot.rotation.z, baseRot.z + active * (skill.def.effect === "ring" ? 0.2 : -0.16), 22, dt);
+  actor.gltfRoot.rotation.z = damp(actor.gltfRoot.rotation.z, baseRot.z + active * (motion === "ring" ? 0.26 : -0.16) + streetRecoil * 0.12, 22, dt);
   actor.gltfRoot.position.x = damp(actor.gltfRoot.position.x, basePos.x + Math.sin(progress * Math.PI * 2) * 0.08, 22, dt);
-  actor.gltfRoot.position.z = damp(actor.gltfRoot.position.z, basePos.z + active * (skill.def.effect === "dash" ? 0.54 : 0.18), 24, dt);
+  actor.gltfRoot.position.z = damp(actor.gltfRoot.position.z, basePos.z + active * (motion === "dash" ? 0.64 : 0.18) - streetRecoil * 0.08, 24, dt);
   if (actor.rigKit) {
     actor.rigKit.rotation.x = damp(actor.rigKit.rotation.x, -dashLean * active * 0.6, 24, dt);
     actor.rigKit.rotation.y = damp(actor.rigKit.rotation.y, twist * 0.62, 24, dt);
-    actor.rigKit.rotation.z = damp(actor.rigKit.rotation.z, active * (skill.def.effect === "ring" ? 0.34 : -0.12), 22, dt);
+    actor.rigKit.rotation.z = damp(actor.rigKit.rotation.z, active * (motion === "ring" ? 0.42 : -0.12), 22, dt);
   }
   if (actor.rigWeapon) {
-    actor.rigWeapon.rotation.x = damp(actor.rigWeapon.rotation.x, -1.08 + active * 1.9, 28, dt);
-    actor.rigWeapon.rotation.y = damp(actor.rigWeapon.rotation.y, -1.0 + twist * 1.3, 28, dt);
-    actor.rigWeapon.rotation.z = damp(actor.rigWeapon.rotation.z, -0.6 + active * 1.1, 28, dt);
+    const targetX = motion === "stomp" ? -1.62 + streetRecoil * 2.2 : -1.08 + active * 1.9;
+    const targetY = motion === "ring" ? -0.35 + twist * 1.65 : -1.0 + twist * 1.3;
+    const targetZ = motion === "dash" ? -0.95 + snap * 1.55 : -0.6 + active * 1.1;
+    actor.rigWeapon.rotation.x = damp(actor.rigWeapon.rotation.x, targetX, 28, dt);
+    actor.rigWeapon.rotation.y = damp(actor.rigWeapon.rotation.y, targetY, 28, dt);
+    actor.rigWeapon.rotation.z = damp(actor.rigWeapon.rotation.z, targetZ, 28, dt);
   }
 }
 
@@ -3340,7 +3351,8 @@ function applyPlayerSkillBoneOverlay(actor) {
   if (!skill || !bones) return;
   const progress = clamp(skill.t / skill.def.duration, 0, 1);
   const active = Math.sin(progress * Math.PI);
-  const spin = skill.def.effect === "ring" ? Math.sin(progress * Math.PI * 2.4) : active;
+  const motion = skill.def.motion ?? skill.def.effect;
+  const spin = motion === "ring" ? Math.sin(progress * Math.PI * 2.4) : active;
   const rightArm = bones["mixamorig:RightArm"];
   const rightForeArm = bones["mixamorig:RightForeArm"];
   const leftArm = bones["mixamorig:LeftArm"];
@@ -3353,7 +3365,7 @@ function applyPlayerSkillBoneOverlay(actor) {
   if (spine) spine.rotation.y += spin * 0.22;
   if (spine1) spine1.rotation.y += spin * 0.3;
   if (spine2) {
-    spine2.rotation.x -= active * (skill.def.effect === "dash" ? 0.18 : -0.08);
+    spine2.rotation.x -= active * (motion === "dash" ? 0.2 : motion === "stomp" ? -0.16 : -0.08);
     spine2.rotation.y += spin * 0.26;
   }
   if (rightArm) {
@@ -3363,7 +3375,7 @@ function applyPlayerSkillBoneOverlay(actor) {
   if (rightForeArm) rightForeArm.rotation.z -= active * 0.45;
   if (leftArm) {
     leftArm.rotation.z += active * 0.34;
-    leftArm.rotation.x += skill.def.effect === "stomp" ? active * 0.2 : -active * 0.1;
+    leftArm.rotation.x += motion === "stomp" ? active * 0.24 : -active * 0.1;
   }
   if (leftForeArm) leftForeArm.rotation.z += active * 0.2;
   if (!actor.grounded) {
@@ -4088,15 +4100,16 @@ function updateActiveSkill(dt) {
 
   skill.t += dt;
   skill.trailTimer -= dt;
-  if (skill.def.effect === "dash" && skill.trailTimer <= 0) {
+  if ((skill.def.motion ?? skill.def.effect) === "dash" && skill.trailTimer <= 0) {
     const trailPos = player.group.position.clone().addScaledVector(getPlayerForward(), -0.35);
-    spawnSkillEffect("dashTrail", trailPos, player.yaw, { ...skill.def, duration: 0.22, radius: 0.76 });
+    spawnSkillEffect("puddleTrail", trailPos, player.yaw, { ...skill.def, duration: 0.24, radius: 0.82 });
     skill.trailTimer = 0.045;
   }
 
   if (!skill.hitDone && skill.t >= skill.def.hitTime) {
     skill.hitDone = true;
     applySkillDamage(skill.def);
+    spawnSkillEffect(`${skill.def.effect}Impact`, player.group.position, player.yaw, { ...skill.def, duration: 0.36 });
     setCameraShake(skill.def.shake * 1.2, 0.22);
   }
 
@@ -4949,6 +4962,14 @@ function createSkillStreakTexture(colorA, colorB, variant = "dash") {
     grad.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = grad;
     ctx.fillRect(0, h * 0.28, w, h * 0.44);
+    if (variant === "alley") {
+      ctx.fillStyle = "rgba(255,214,105,0.42)";
+      ctx.fillRect(w * 0.1, h * 0.58, w * 0.64, 4);
+      ctx.fillStyle = "rgba(255,47,109,0.34)";
+      for (let i = 0; i < 7; i += 1) ctx.fillRect(w * (0.18 + i * 0.09), h * (0.34 + rng() * 0.18), 42 + rng() * 54, 4 + rng() * 7);
+      ctx.fillStyle = "rgba(120,245,255,0.2)";
+      for (let i = 0; i < 80; i += 1) ctx.fillRect(rng() * w, h * (0.58 + rng() * 0.28), 2 + rng() * 14, 1);
+    }
     ctx.lineCap = "round";
     ctx.shadowColor = rgbaStyle(colorA, 0.9);
     ctx.shadowBlur = 26;
@@ -4968,6 +4989,96 @@ function createSkillStreakTexture(colorA, colorB, variant = "dash") {
     ctx.lineTo(w * 0.82, h * 0.47);
     ctx.stroke();
   });
+}
+
+function createPuddleRippleTexture(colorA, colorB) {
+  return canvasTexture(512, 512, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    const grad = ctx.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w * 0.48);
+    grad.addColorStop(0, rgbaStyle(colorA, 0.2));
+    grad.addColorStop(0.45, rgbaStyle(colorB, 0.1));
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    ctx.lineWidth = 5;
+    for (let i = 0; i < 5; i += 1) {
+      ctx.strokeStyle = rgbaStyle(i % 2 ? colorA : colorB, 0.62 - i * 0.09);
+      ctx.beginPath();
+      ctx.ellipse(w / 2, h / 2, w * (0.14 + i * 0.07), h * (0.06 + i * 0.035), -0.08, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(255,255,255,0.28)";
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 22; i += 1) {
+      const y = h * (0.38 + rng() * 0.28);
+      ctx.beginPath();
+      ctx.moveTo(w * (0.1 + rng() * 0.18), y);
+      ctx.lineTo(w * (0.68 + rng() * 0.22), y + (rng() - 0.5) * 18);
+      ctx.stroke();
+    }
+  });
+}
+
+function createNeonPanelTexture(colorA, colorB) {
+  return canvasTexture(256, 128, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "rgba(5,9,12,0.72)";
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = rgbaStyle(colorA, 0.96);
+    ctx.lineWidth = 8;
+    ctx.strokeRect(8, 8, w - 16, h - 16);
+    ctx.shadowColor = rgbaStyle(colorA, 0.9);
+    ctx.shadowBlur = 18;
+    ctx.strokeStyle = rgbaStyle(colorB, 0.82);
+    ctx.lineWidth = 7;
+    ctx.lineCap = "round";
+    for (let i = 0; i < 5; i += 1) {
+      const x = 34 + i * 38;
+      ctx.beginPath();
+      ctx.moveTo(x, 35 + rng() * 8);
+      ctx.lineTo(x + 12 + rng() * 12, 64 + rng() * 12);
+      ctx.lineTo(x - 5 + rng() * 12, 90 + rng() * 7);
+      ctx.stroke();
+    }
+  });
+}
+
+function addSkillPlane(group, width, height, material, position, rotation = null) {
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
+  mesh.position.set(position[0], position[1], position[2]);
+  if (rotation) mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+  group.add(mesh);
+  return mesh;
+}
+
+function addRainSpray(group, colorA, colorB, count = 16, radius = 1.6) {
+  const materialA = createSkillMaterial({ color: colorA, opacity: 0.42 });
+  const materialB = createSkillMaterial({ color: colorB, opacity: 0.34 });
+  for (let i = 0; i < count; i += 1) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, 0.34 + rng() * 0.32), i % 2 ? materialA : materialB);
+    const angle = rng() * Math.PI * 2;
+    const r = radius * (0.25 + rng() * 0.75);
+    mesh.position.set(Math.cos(angle) * r, 0.09 + rng() * 0.46, Math.sin(angle) * r);
+    mesh.rotation.set(rng() * 0.6, angle, rng() * Math.PI);
+    group.add(mesh);
+  }
+}
+
+function addNeonPanelShards(group, colorA, colorB, count = 7, radius = 2.2) {
+  const texture = createNeonPanelTexture(colorA, colorB);
+  for (let i = 0; i < count; i += 1) {
+    const angle = (i / count) * Math.PI * 2 + rng() * 0.28;
+    const material = createSkillMaterial({ map: texture, opacity: 0.36 + rng() * 0.22 });
+    const panel = addSkillPlane(
+      group,
+      0.42 + rng() * 0.24,
+      0.2 + rng() * 0.16,
+      material,
+      [Math.cos(angle) * radius, 0.55 + rng() * 0.85, Math.sin(angle) * radius],
+      [0, -angle + Math.PI * 0.5, -0.36 + rng() * 0.72],
+    );
+    panel.userData.spin = (rng() - 0.5) * 1.4;
+  }
 }
 
 function createSkillMaterial({ color = 0xffffff, opacity = 0.7, map = null } = {}) {
@@ -4996,8 +5107,15 @@ function tagSkillMaterials(group) {
 }
 
 function spawnSkillEffect(kind, position, yaw, options = {}) {
+  const visualKind = {
+    dash: "alleyDash",
+    dashTrail: "puddleTrail",
+    ring: "signRing",
+    stomp: "streetStomp",
+  }[kind] ?? kind;
   const colorA = options.colorA ?? 0x2df4ed;
   const colorB = options.colorB ?? 0xff2f6d;
+  const waterColor = options.waterColor ?? 0x2df4ed;
   const group = new THREE.Group();
   group.position.copy(position);
   group.position.y = Math.max(0.055, position.y + 0.055);
@@ -5005,57 +5123,113 @@ function spawnSkillEffect(kind, position, yaw, options = {}) {
   const duration = options.duration ?? 0.5;
   let endScale = 1.8;
 
-  if (kind === "dash") {
+  if (visualKind === "alleyDash") {
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.35, 5.4),
-      createSkillMaterial({ map: createSkillStreakTexture(colorA, colorB), opacity: 0.78 }),
+      new THREE.PlaneGeometry(1.55, 5.8),
+      createSkillMaterial({ map: createSkillStreakTexture(colorA, colorB, "alley"), opacity: 0.76 }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.z = -1.45;
     group.add(ground);
 
+    const puddle = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.4, 1.15),
+      createSkillMaterial({ map: createPuddleRippleTexture(waterColor, colorA), opacity: 0.52 }),
+    );
+    puddle.rotation.x = -Math.PI / 2;
+    puddle.position.z = -0.48;
+    group.add(puddle);
+
     const blade = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.6, 1.18),
+      new THREE.PlaneGeometry(3.85, 1.08),
       createSkillMaterial({ map: createSkillStreakTexture(colorB, colorA), opacity: 0.64 }),
     );
     blade.position.set(0, 1.12, 1.05);
     blade.rotation.z = -0.18;
     group.add(blade);
+    addNeonPanelShards(group, colorB, colorA, 4, 1.15);
+    addRainSpray(group, waterColor, colorA, 18, 1.4);
     endScale = 1.12;
-  } else if (kind === "dashTrail") {
+  } else if (visualKind === "puddleTrail") {
+    addSkillPlane(
+      group,
+      1.35,
+      0.7,
+      createSkillMaterial({ map: createPuddleRippleTexture(waterColor, colorB), opacity: 0.42 }),
+      [0, 0.015, 0],
+      [-Math.PI / 2, 0, rng() * Math.PI],
+    );
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(options.radius ?? 0.7, 0.018, 8, 60),
-      createSkillMaterial({ color: colorA, opacity: 0.48 }),
+      createSkillMaterial({ color: waterColor, opacity: 0.42 }),
     );
     ring.rotation.x = Math.PI / 2;
     group.add(ring);
     endScale = 1.65;
-  } else if (kind === "ring") {
+  } else if (visualKind === "alleyDashImpact") {
+    addSkillPlane(
+      group,
+      2.8,
+      0.8,
+      createSkillMaterial({ map: createSkillStreakTexture(colorB, waterColor, "alley"), opacity: 0.68 }),
+      [0, 0.95, 1.2],
+      [0, 0, -0.08],
+    );
+    addRainSpray(group, waterColor, colorB, 22, 1.8);
+    endScale = 1.28;
+  } else if (visualKind === "signRing") {
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(options.radius ?? 3.2, 0.034, 12, 96),
       createSkillMaterial({ color: colorA, opacity: 0.72 }),
     );
     ring.rotation.x = Math.PI / 2;
     group.add(ring);
+    const wetRing = new THREE.Mesh(
+      new THREE.TorusGeometry((options.radius ?? 3.2) * 0.72, 0.02, 10, 88),
+      createSkillMaterial({ color: waterColor, opacity: 0.52 }),
+    );
+    wetRing.rotation.x = Math.PI / 2;
+    group.add(wetRing);
     const slashPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry((options.radius ?? 3.2) * 2.12, 1.1),
+      new THREE.PlaneGeometry((options.radius ?? 3.2) * 2.18, 1.18),
       createSkillMaterial({ map: createSkillStreakTexture(colorA, colorB, "ring"), opacity: 0.62 }),
     );
     slashPlane.position.y = 1.05;
     slashPlane.rotation.z = 0.1;
     group.add(slashPlane);
+    addNeonPanelShards(group, colorA, colorB, 9, (options.radius ?? 3.2) * 0.72);
+    addRainSpray(group, waterColor, colorB, 18, 2.6);
     endScale = 1.22;
-  } else if (kind === "stomp") {
-    const radius = options.radius ?? 4.3;
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(radius, 0.045, 14, 112),
-      createSkillMaterial({ color: colorB, opacity: 0.82 }),
+  } else if (visualKind === "signRingImpact") {
+    addNeonPanelShards(group, colorA, colorB, 12, options.radius ?? 3.4);
+    addSkillPlane(
+      group,
+      (options.radius ?? 3.3) * 2.1,
+      (options.radius ?? 3.3) * 2.1,
+      createSkillMaterial({ map: createPuddleRippleTexture(waterColor, colorA), opacity: 0.44 }),
+      [0, 0.012, 0],
+      [-Math.PI / 2, 0, 0],
     );
-    ring.rotation.x = Math.PI / 2;
-    group.add(ring);
+    endScale = 1.36;
+  } else if (visualKind === "streetStomp") {
+    const radius = options.radius ?? 4.3;
+    for (let i = 0; i < 3; i += 1) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(radius * (0.45 + i * 0.2), 0.035 - i * 0.004, 14, 112),
+        createSkillMaterial({ color: i % 2 ? colorA : waterColor, opacity: 0.72 - i * 0.12 }),
+      );
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+    }
+    const manhole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.76, 0.76, 0.025, 44),
+      createSkillMaterial({ color: 0x151719, opacity: 0.52 }),
+    );
+    manhole.position.y = 0.01;
+    group.add(manhole);
     const pillar = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.42, 1.35, 2.2, 32, 1, true),
-      createSkillMaterial({ color: colorA, opacity: 0.18 }),
+      new THREE.CylinderGeometry(0.56, 1.55, 2.25, 32, 1, true),
+      createSkillMaterial({ color: waterColor, opacity: 0.16 }),
     );
     pillar.position.y = 1.1;
     group.add(pillar);
@@ -5065,14 +5239,36 @@ function spawnSkillEffect(kind, position, yaw, options = {}) {
     );
     shock.rotation.x = -Math.PI / 2;
     group.add(shock);
-    endScale = 1.38;
+    addRainSpray(group, waterColor, colorA, 30, 3.2);
+    endScale = 1.42;
+  } else if (visualKind === "streetStompImpact") {
+    const radius = options.radius ?? 4.3;
+    for (let i = 0; i < 4; i += 1) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(radius * (0.28 + i * 0.18), 0.022, 10, 96),
+        createSkillMaterial({ color: i % 2 ? colorA : waterColor, opacity: 0.64 - i * 0.08 }),
+      );
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+    }
+    addNeonPanelShards(group, colorA, colorB, 6, 2.4);
+    addRainSpray(group, waterColor, colorA, 34, 3.4);
+    endScale = 1.5;
   } else {
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(options.radius ?? 1.0, 0.025, 10, 72),
-      createSkillMaterial({ color: colorA, opacity: 0.54 }),
+      createSkillMaterial({ color: waterColor, opacity: 0.54 }),
     );
     ring.rotation.x = Math.PI / 2;
     group.add(ring);
+    addSkillPlane(
+      group,
+      1.45,
+      0.72,
+      createSkillMaterial({ map: createPuddleRippleTexture(waterColor, colorA), opacity: 0.36 }),
+      [0, 0.015, 0],
+      [-Math.PI / 2, 0, 0],
+    );
     endScale = 1.72;
   }
 
@@ -5080,7 +5276,7 @@ function spawnSkillEffect(kind, position, yaw, options = {}) {
   scene.add(group);
   skillEffects.push({
     group,
-    kind,
+    kind: visualKind,
     life: duration,
     maxLife: duration,
     endScale,
@@ -5095,11 +5291,13 @@ function updateSkillEffects(dt) {
     const fade = 1 - smoothstep01((p - 0.48) / 0.52);
     const scale = 1 + (effect.endScale - 1) * smoothstep01(p);
     effect.group.scale.setScalar(scale);
-    if (effect.kind === "dash") {
+    if (effect.kind === "alleyDash") {
       effect.group.position.addScaledVector(new THREE.Vector3(Math.sin(effect.group.rotation.y), 0, Math.cos(effect.group.rotation.y)), dt * 2.4);
     }
-    if (effect.kind === "ring") effect.group.rotation.y += dt * 2.8;
+    if (effect.kind === "signRing" || effect.kind === "signRingImpact") effect.group.rotation.y += dt * 2.8;
+    if (effect.kind === "streetStomp" || effect.kind === "streetStompImpact") effect.group.position.y += dt * 0.08;
     effect.group.traverse((node) => {
+      if (node.userData.spin) node.rotation.z += node.userData.spin * dt;
       if (!node.material) return;
       const materials = Array.isArray(node.material) ? node.material : [node.material];
       for (const material of materials) {
