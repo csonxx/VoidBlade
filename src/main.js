@@ -5,6 +5,7 @@ import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import characterCinematicAtlasUrl from "./assets/character-cinematic-atlas.png";
 import characterIdentityAtlasUrl from "./assets/character-identity-atlas.png";
 import characterMaterialAtlasUrl from "./assets/character-material-atlas.png";
+import characterRosterGangUrl from "./assets/character-roster-hk-gang-10.png";
 import characterRosterVividUrl from "./assets/character-roster-hk-vivid-10.png";
 import characterWaveAtlasUrl from "./assets/character-wave-atlas-v2.png";
 import hkCinematicStreetUrl from "./assets/hk-cinematic-street.png";
@@ -107,6 +108,8 @@ const gltfLoader = new GLTFLoader();
 const streetActorModelPromise = gltfLoader.loadAsync(streetActorModelUrl);
 const generatedAssets = createGeneratedAssetTextures();
 scene.background = visualMode.generatedScene ? generatedAssets.street : new THREE.Color(0x061018);
+const rosterCutoutCache = new Map();
+const pendingRosterCutoutRenders = [];
 
 function atlasGridCell(col, row, pad = 0.0075) {
   const size = 0.25;
@@ -308,6 +311,7 @@ const enemyWavePalettes = [
     tattooPanel: characterIdentityPanels.tattooSkin,
     hairShape: "slickQuiff",
     weaponType: "baton",
+    rosterIndex: 1,
   },
   {
     name: "綠緞面車手",
@@ -350,6 +354,7 @@ const enemyWavePalettes = [
     undershirtPanel: characterIdentityPanels.blackMesh,
     hairShape: "shortUndercut",
     weaponType: "baton",
+    rosterIndex: 2,
   },
   {
     name: "紫皮衣刀手",
@@ -392,6 +397,7 @@ const enemyWavePalettes = [
     tattooPanel: characterIdentityPanels.tattooSkin,
     hairShape: "spikes",
     weaponType: "knife",
+    rosterIndex: 3,
   },
   {
     name: "白西裝狠人",
@@ -434,6 +440,7 @@ const enemyWavePalettes = [
     undershirtPanel: characterIdentityPanels.whiteTank,
     hairShape: "slickPart",
     weaponType: "cane",
+    rosterIndex: 5,
   },
   {
     name: "豹紋背心惡漢",
@@ -477,6 +484,7 @@ const enemyWavePalettes = [
     tattooPanel: characterIdentityPanels.tattooSkin,
     hairShape: "shavedMohawk",
     weaponType: "baton",
+    rosterIndex: 6,
   },
   {
     name: "牛仔背心拳手",
@@ -519,6 +527,7 @@ const enemyWavePalettes = [
     tattooPanel: characterIdentityPanels.tattooSkin,
     hairShape: "shortMessy",
     weaponType: "fists",
+    rosterIndex: 7,
   },
   {
     name: "金繡堂主",
@@ -563,6 +572,7 @@ const enemyWavePalettes = [
     tattooPanel: characterIdentityPanels.tattooSkin,
     hairShape: "slickBack",
     weaponType: "cane",
+    rosterIndex: 6,
   },
   {
     name: "長髮牛仔龍頭",
@@ -605,6 +615,7 @@ const enemyWavePalettes = [
     undershirtPanel: characterIdentityPanels.blackMesh,
     hairShape: "long",
     weaponType: "baton",
+    rosterIndex: 7,
   },
   {
     name: "灰橙工地重裝",
@@ -647,6 +658,7 @@ const enemyWavePalettes = [
     undershirtPanel: characterIdentityPanels.blackMesh,
     hairShape: "hardHat",
     weaponType: "hammer",
+    rosterIndex: 8,
   },
   {
     name: "粉色夜場新人",
@@ -689,6 +701,7 @@ const enemyWavePalettes = [
     undershirtPanel: characterIdentityPanels.blackMesh,
     hairShape: "spikes",
     weaponType: "baton",
+    rosterIndex: 9,
   },
 ];
 
@@ -792,6 +805,13 @@ const effectTextureCache = new Map();
 
 const materials = createMaterials();
 const player = createPlayer();
+attachCinematicActorShell(player, {
+  role: "player",
+  rosterIndex: 0,
+  width: 1.12,
+  height: 2.26,
+  opacity: 1,
+});
 const slash = createSlashEffect();
 const rain = createRainSystem();
 
@@ -813,7 +833,10 @@ createCinematicAtmosphere();
 bindInput();
 resize();
 resetGame();
-Promise.allSettled(textureReadyPromises).then(() => animate());
+Promise.allSettled(textureReadyPromises).then(() => {
+  for (const renderCutout of pendingRosterCutoutRenders) renderCutout();
+  animate();
+});
 
 function makeRng(seed) {
   let value = seed >>> 0;
@@ -935,6 +958,7 @@ function createGeneratedAssetTextures() {
     character: load(characterMaterialAtlasUrl),
     cinematicCharacter: load(characterCinematicAtlasUrl),
     identityCharacter: load(characterIdentityAtlasUrl),
+    characterRosterGang: load(characterRosterGangUrl),
     characterRosterVivid: load(characterRosterVividUrl),
     waveCharacter: load(characterWaveAtlasUrl),
     atlas: load(hkMaterialAtlasUrl),
@@ -987,6 +1011,133 @@ function actorCharacterTexture(panel) {
     return atlasTexture(panel.rect, generatedAssets.identityCharacter);
   }
   return cinematicCharacterTexture(panel);
+}
+
+function createRosterCutoutTexture(index) {
+  const safeIndex = clamp(Math.floor(index), 0, 9);
+  const cached = rosterCutoutCache.get(safeIndex);
+  if (cached) return cached;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 768;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 8;
+  rosterCutoutCache.set(safeIndex, texture);
+
+  const render = () => {
+    const img = generatedAssets.characterRosterGang.image;
+    if (!img?.width || !img?.height) return;
+    const cols = 5;
+    const rows = 2;
+    const cellW = img.width / cols;
+    const cellH = img.height / rows;
+    const col = safeIndex % cols;
+    const row = Math.floor(safeIndex / cols);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(
+      img,
+      col * cellW,
+      row * cellH,
+      cellW,
+      cellH,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+
+    const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = frame.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const lum = r * 0.2126 + g * 0.7152 + b * 0.0722;
+      const sat = max - min;
+      const x = (i / 4) % canvas.width;
+      const y = Math.floor((i / 4) / canvas.width);
+      const edgeFade = Math.min(x, y, canvas.width - x, canvas.height - y);
+      const backdrop = (lum < 18 && sat < 22) || (lum < 28 && sat < 10);
+      if (backdrop) {
+        data[i + 3] = 0;
+      } else if (lum < 42 && sat < 18) {
+        data[i + 3] = Math.min(data[i + 3], 135);
+      }
+      if (edgeFade < 14) {
+        data[i + 3] = Math.floor(data[i + 3] * clamp(edgeFade / 14, 0, 1));
+      }
+    }
+    ctx.putImageData(frame, 0, 0);
+    texture.needsUpdate = true;
+  };
+
+  const source = generatedAssets.characterRosterGang.image;
+  if (source?.complete || source?.width) render();
+  else {
+    source?.addEventListener?.("load", render, { once: true });
+    pendingRosterCutoutRenders.push(render);
+  }
+  return texture;
+}
+
+function attachCinematicActorShell(actor, options = {}) {
+  if (!actor?.group || actor.cinematicShell) return;
+  const role = options.role ?? "enemy";
+  const texture = createRosterCutoutTexture(options.rosterIndex ?? (role === "player" ? 0 : 1));
+  const height = options.height ?? (role === "player" ? 2.22 : 2.05);
+  const width = options.width ?? (role === "player" ? 1.06 : 0.98);
+  const group = new THREE.Group();
+  group.position.set(0, height * 0.5 + 0.02, 0.02);
+  group.userData.baseY = group.position.y;
+
+  const makeMaterial = (opacity, color = 0xffffff) => new THREE.MeshBasicMaterial({
+    map: texture,
+    color,
+    transparent: true,
+    opacity,
+    alphaTest: 0.08,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+  });
+
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(width * 1.05, height * 1.02), makeMaterial(0.34, 0x050607));
+  shadow.position.set(0.035, -0.015, 0.105);
+  shadow.renderOrder = 35;
+  group.add(shadow);
+
+  const front = new THREE.Mesh(new THREE.PlaneGeometry(width, height), makeMaterial(options.opacity ?? 1));
+  front.position.z = 0.14;
+  front.renderOrder = 36;
+  group.add(front);
+
+  actor.group.add(group);
+  actor.cinematicShell = group;
+}
+
+function softenRigForCinematicShell(actor, role = "enemy") {
+  if (!actor?.cinematicShell) return;
+  const rootOpacity = role === "player" ? 0.08 : 0.07;
+  actor.gltfRoot?.traverse((node) => {
+    if (!node.isMesh || !node.material) return;
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    for (const material of materials) {
+      material.transparent = true;
+      material.opacity = rootOpacity;
+      material.depthWrite = false;
+      if (material.emissive) material.emissiveIntensity *= 0.3;
+    }
+  });
+  if (!actor.rigKit) return;
+  for (const child of actor.rigKit.children) {
+    if (child === actor.rigWeapon) continue;
+    child.visible = false;
+  }
 }
 
 function identityCharacterTexture(panel) {
@@ -3193,6 +3344,7 @@ async function attachRiggedActor(actor, options) {
     actor.gltfBasePosition = root.position.clone();
     actor.gltfBaseRotation = root.rotation.clone();
     actor.rigBones = rigBones;
+    softenRigForCinematicShell(actor, options.role);
     root.visible = true;
     actor.model.visible = false;
     actor.billboard.group.visible = false;
@@ -3889,6 +4041,13 @@ function updateAnimatedActors(dt) {
     }
     const speed = actor.velocity?.length?.() ?? 0;
     const sway = Math.sin(elapsed * (actor === player ? 8.4 : 6.6) + actor.group.id) * Math.min(speed * 0.08, 0.18);
+    if (actor.cinematicShell) {
+      const baseY = actor.cinematicShell.userData.baseY ?? actor.cinematicShell.position.y;
+      actor.cinematicShell.position.y = baseY + Math.abs(Math.sin(elapsed * (actor === player ? 9.5 : 7.8) + actor.group.id)) * Math.min(speed * 0.006, 0.035);
+      actor.cinematicShell.rotation.z = sway * 0.08;
+      const hitScale = actor.hitFlash > 0 || actor.hitPulse > 0 ? 1.035 : 1;
+      actor.cinematicShell.scale.set(hitScale, hitScale, hitScale);
+    }
     for (const part of actor.rigKit.userData.swayParts || []) {
       const base = part.userData.baseRotation;
       part.rotation.x = (base?.x ?? 0) + sway;
@@ -5138,6 +5297,13 @@ function createEnemy(x, z, level) {
     useRig: shouldRig,
     palette,
   };
+  attachCinematicActorShell(enemy, {
+    role: "enemy",
+    rosterIndex: palette.rosterIndex ?? ((level - 1) % 9) + 1,
+    width: style === "constructionHeavy" || style === "leopardBruiser" || style === "goldBoss" ? 1.08 : 0.98,
+    height: palette.rigHeight ? palette.rigHeight + 0.12 : 2.06,
+    opacity: 1,
+  });
   if (shouldRig) {
     attachRiggedActor(enemy, {
       role: "enemy",

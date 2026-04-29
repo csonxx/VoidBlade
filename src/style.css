@@ -571,10 +571,10 @@ body {
 .start-button {
   position: absolute;
   left: 50%;
-  top: 54%;
+  bottom: 48px;
   z-index: 3;
-  min-width: 224px;
-  height: 76px;
+  min-width: 204px;
+  height: 60px;
   border: 1px solid rgba(255, 224, 114, 0.92);
   border-radius: 0;
   background:
@@ -584,7 +584,7 @@ body {
   backdrop-filter: blur(8px) saturate(1.25);
   color: #fff4c2;
   font: inherit;
-  font-size: 25px;
+  font-size: 20px;
   font-weight: 900;
   letter-spacing: 0;
   text-shadow:
@@ -595,7 +595,7 @@ body {
     0 0 54px rgba(45, 244, 237, 0.28),
     inset 0 0 28px rgba(255, 47, 109, 0.18),
     0 18px 48px rgba(0, 0, 0, 0.5);
-  transform: translate(-50%, -50%) skewX(-7deg);
+  transform: translateX(-50%) skewX(-7deg);
   cursor: pointer;
   clip-path: polygon(18px 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
 }
