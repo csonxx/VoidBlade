@@ -12,7 +12,10 @@ import hkCinematicStreetUrl from "./assets/hk-cinematic-street.png";
 import hkCloseStreetAtlasUrl from "./assets/hk-close-street-atlas.png";
 import hkMaterialAtlasUrl from "./assets/hk-material-atlas.png";
 import hkRainStreetUrl from "./assets/hk-rain-street.png";
-import streetActorModelUrl from "./assets/street-actor.glb?url";
+import heroRaincoatAssetUrl from "./assets/characters/hk-hero-raincoat.glb?url";
+import enemyPurpleKnifeAssetUrl from "./assets/characters/hk-enemy-purple-knife.glb?url";
+import enemyRedFloralAssetUrl from "./assets/characters/hk-enemy-red-floral.glb?url";
+import enemyWhiteBossAssetUrl from "./assets/characters/hk-enemy-white-boss.glb?url";
 import "./style.css";
 
 const canvas = document.querySelector("#game-canvas");
@@ -105,11 +108,38 @@ const cinematicSceneOffset = new THREE.Vector2(0, 0);
 const textureLoader = new THREE.TextureLoader();
 const textureReadyPromises = [];
 const gltfLoader = new GLTFLoader();
-const streetActorModelPromise = gltfLoader.loadAsync(streetActorModelUrl);
 const generatedAssets = createGeneratedAssetTextures();
 scene.background = visualMode.generatedScene ? generatedAssets.street : new THREE.Color(0x061018);
 const rosterCutoutCache = new Map();
 const pendingRosterCutoutRenders = [];
+const characterAssetPromises = new Map();
+const enemyCharacterAssetCycle = ["enemyRedFloral", "enemyPurpleKnife", "enemyWhiteBoss"];
+const characterAssetRegistry = {
+  heroRaincoat: {
+    url: heroRaincoatAssetUrl,
+    desiredHeight: 2.16,
+    rootYaw: 0,
+    roleLabel: "player",
+  },
+  enemyRedFloral: {
+    url: enemyRedFloralAssetUrl,
+    desiredHeight: 1.98,
+    rootYaw: 0,
+    roleLabel: "enemy",
+  },
+  enemyPurpleKnife: {
+    url: enemyPurpleKnifeAssetUrl,
+    desiredHeight: 1.94,
+    rootYaw: 0,
+    roleLabel: "enemy",
+  },
+  enemyWhiteBoss: {
+    url: enemyWhiteBossAssetUrl,
+    desiredHeight: 2.08,
+    rootYaw: 0,
+    roleLabel: "enemy",
+  },
+};
 
 function atlasGridCell(col, row, pad = 0.0075) {
   const size = 0.25;
@@ -713,6 +743,19 @@ function resolveActorPalette(role, level = 1, palette = null) {
   return palette ?? (role === "player" ? heroVisualPalette : getEnemyWavePalette(level));
 }
 
+function getEnemyCharacterAssetKey(level = 1) {
+  return enemyCharacterAssetCycle[(Math.max(1, level) - 1) % enemyCharacterAssetCycle.length];
+}
+
+function loadCharacterAsset(assetKey) {
+  const asset = characterAssetRegistry[assetKey];
+  if (!asset) throw new Error(`Unknown character asset: ${assetKey}`);
+  if (!characterAssetPromises.has(assetKey)) {
+    characterAssetPromises.set(assetKey, gltfLoader.loadAsync(asset.url));
+  }
+  return characterAssetPromises.get(assetKey);
+}
+
 const skillDefinitions = [
   {
     name: "巷口疾斬",
@@ -805,13 +848,6 @@ const effectTextureCache = new Map();
 
 const materials = createMaterials();
 const player = createPlayer();
-attachCinematicActorShell(player, {
-  role: "player",
-  rosterIndex: 0,
-  width: 1.12,
-  height: 2.26,
-  opacity: 1,
-});
 const slash = createSlashEffect();
 const rain = createRainSystem();
 
@@ -820,6 +856,7 @@ scene.add(slash.mesh);
 scene.add(rain.points);
 attachRiggedActor(player, {
   role: "player",
+  assetKey: "heroRaincoat",
   desiredHeight: 2.12,
   palette: heroVisualPalette,
   tint: heroVisualPalette.gltfColor,
@@ -3263,20 +3300,102 @@ function roundedBox(width, height, depth, radius = 0.035, segments = 3) {
   return new RoundedBoxGeometry(width, height, depth, segments, Math.min(radius, width * 0.45, height * 0.45, depth * 0.45));
 }
 
+function findRigNode(root, matcher) {
+  let found = null;
+  root.traverse((node) => {
+    if (!found && matcher(node)) found = node;
+  });
+  return found;
+}
+
+function tuneTrueAssetMaterial(material, palette, role) {
+  const name = (material.name ?? "").toLowerCase();
+  material.needsUpdate = true;
+  material.envMapIntensity = role === "player" ? 1.35 : 1.12;
+
+  if (name.includes("skin")) {
+    material.color?.setHex(palette.skinColor ?? 0x7a553d);
+    if ("map" in material) material.map = identityCharacterTexture(palette.identitySkinPanel ?? characterIdentityPanels.skinWarm);
+    material.roughness = 0.58;
+    material.metalness = 0.04;
+    return;
+  }
+
+  if (name.includes("hair")) {
+    material.color?.setHex(palette.hairColor ?? 0x111111);
+    if ("map" in material) material.map = identityCharacterTexture(palette.hairPanel ?? characterIdentityPanels.hairSlick);
+    material.roughness = 0.42;
+    material.metalness = 0.06;
+    return;
+  }
+
+  if (name.includes("jacket")) {
+    material.color?.setHex(name.includes("dark") ? (palette.deepCoatColor ?? 0x111111) : (palette.coatColor ?? palette.jacketColor ?? palette.gltfColor));
+    if ("map" in material) {
+      material.map = palette.pattern && palette.pattern !== "plain"
+        ? streetPatternTexture(palette.pattern, palette.coatColor, palette.accent, palette.secondaryAccent)
+        : actorCharacterTexture(palette.coatPanel ?? palette.gltfPanel ?? characterWavePanels.orangeRaincoat);
+    }
+    material.roughness = role === "player" ? 0.2 : 0.36;
+    material.metalness = role === "player" ? 0.22 : 0.12;
+    return;
+  }
+
+  if (name.includes("shirt")) {
+    material.color?.setHex(palette.deepCoatColor ?? 0x111111);
+    if ("map" in material) material.map = actorCharacterTexture(palette.deepCoatPanel ?? characterCinematicPanels.meshSuit);
+    material.roughness = 0.58;
+    material.metalness = 0.06;
+    return;
+  }
+
+  if (name.includes("pants")) {
+    material.color?.setHex(palette.pantsColor ?? palette.deepCoatColor ?? 0x111111);
+    if ("map" in material) material.map = actorCharacterTexture(palette.deepCoatPanel ?? characterCinematicPanels.meshSuit);
+    material.roughness = 0.52;
+    material.metalness = 0.08;
+    return;
+  }
+
+  if (name.includes("boots")) {
+    material.color?.setHex(palette.bootColor ?? palette.rubberColor ?? 0x0a0a0a);
+    if ("map" in material) material.map = identityCharacterTexture(characterIdentityPanels.wetBoot);
+    material.roughness = 0.34;
+    material.metalness = 0.18;
+    return;
+  }
+
+  if (name.includes("trim") || name.includes("metal")) {
+    material.color?.setHex(palette.metalColor ?? palette.decalsColor ?? 0xd7b56d);
+    if ("map" in material) material.map = actorCharacterTexture(palette.metalPanel ?? characterWavePanels.gunmetal);
+    material.roughness = 0.16;
+    material.metalness = 0.78;
+    return;
+  }
+
+  if (name.includes("accent") || name.includes("secondary") || name.includes("sunglasses")) {
+    const color = name.includes("secondary") ? palette.secondaryAccent : palette.accent;
+    material.color?.setHex(color ?? palette.visorColor ?? 0xffffff);
+    material.emissive?.setHex(color ?? palette.visorColor ?? 0xffffff);
+    material.emissiveIntensity = name.includes("sunglasses") ? 0.12 : 0.42;
+    material.roughness = 0.12;
+    material.metalness = 0.38;
+  }
+}
+
 async function attachRiggedActor(actor, options) {
+  actor.model.visible = false;
+  actor.billboard.group.visible = false;
+  if (actor.cinematicShell) actor.cinematicShell.visible = false;
+
   try {
-    const gltf = await streetActorModelPromise;
+    const assetKey = options.assetKey ?? (options.role === "player" ? "heroRaincoat" : getEnemyCharacterAssetKey(options.level));
+    const asset = characterAssetRegistry[assetKey] ?? characterAssetRegistry.heroRaincoat;
+    const gltf = await loadCharacterAsset(assetKey);
     if (actor.removed || (!actor.group.parent && actor !== player)) return;
 
     const root = SkeletonUtils.clone(gltf.scene);
     const palette = resolveActorPalette(options.role, options.level, options.palette);
-    const accent = new THREE.Color(options.accent ?? palette.accent);
-    const rootBodyColor = options.role === "enemy"
-      ? (palette.bodyColor ?? palette.coatColor ?? palette.gltfColor)
-      : palette.gltfColor;
-    const rootPatternTexture = options.role === "enemy" && palette.pattern && palette.pattern !== "plain"
-      ? streetPatternTexture(palette.pattern, palette.coatColor, palette.accent, palette.secondaryAccent)
-      : null;
     const rigMaterials = [];
     const rigBones = {};
 
@@ -3294,19 +3413,12 @@ async function attachRiggedActor(actor, options) {
         : node.material.clone();
 
       const materialsToTune = Array.isArray(node.material) ? node.material : [node.material];
-      const isJointMesh = /joint/i.test(node.name) || materialsToTune.some((material) => /joint/i.test(material.name ?? ""));
       for (const material of materialsToTune) {
-        if (material.color) material.color.setHex(isJointMesh ? (palette.skinColor ?? 0x6a4d3a) : rootBodyColor);
-        if ("map" in material) {
-          material.map = isJointMesh
-            ? identityCharacterTexture(palette.identitySkinPanel ?? characterIdentityPanels.skinWarm)
-            : rootPatternTexture ?? actorCharacterTexture(palette.gltfPanel);
-          material.needsUpdate = true;
+        tuneTrueAssetMaterial(material, palette, options.role);
+        if (material.emissive) {
+          material.userData.baseEmissiveColor = material.emissive.getHex();
+          material.userData.baseEmissiveIntensity = material.emissiveIntensity ?? 0;
         }
-        if ("roughness" in material) material.roughness = isJointMesh ? 0.56 : palette.gltfRoughness ?? (options.role === "player" ? 0.22 : 0.32);
-        if ("metalness" in material) material.metalness = isJointMesh ? 0.04 : palette.gltfMetalness ?? (options.role === "player" ? 0.44 : 0.48);
-        if ("envMapIntensity" in material) material.envMapIntensity = isJointMesh ? 0.72 : palette.gltfEnv ?? (options.role === "player" ? 1.34 : 1.12);
-        if (material.emissive) material.emissive.copy(accent).multiplyScalar(palette.gltfEmissiveBoost ?? 0.07);
         rigMaterials.push(material);
       }
     });
@@ -3314,12 +3426,12 @@ async function attachRiggedActor(actor, options) {
     root.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(root);
     const height = Math.max(0.01, box.max.y - box.min.y);
-    root.scale.setScalar(options.desiredHeight / height);
+    root.scale.setScalar((asset.desiredHeight ?? options.desiredHeight) / height);
     root.updateMatrixWorld(true);
     box.setFromObject(root);
     const center = box.getCenter(new THREE.Vector3());
     root.position.set(-center.x, -box.min.y, -center.z);
-    root.rotation.y = Math.PI;
+    root.rotation.y = asset.rootYaw ?? 0;
 
     const mixer = new THREE.AnimationMixer(root);
     const actions = {};
@@ -3330,32 +3442,32 @@ async function attachRiggedActor(actor, options) {
       actions[clip.name.charAt(0).toUpperCase() + clip.name.slice(1)] = action;
     }
 
-    const kit = createRiggedCyberKit(options.role, options.accent ?? palette.accent, options.secondaryAccent ?? palette.secondaryAccent, palette);
     actor.group.add(root);
-    actor.group.add(kit);
+    actor.trueAssetKey = assetKey;
     actor.gltfRoot = root;
     actor.mixer = mixer;
     actor.actions = actions;
     actor.currentAction = null;
     actor.currentActionName = "";
-    actor.rigKit = kit;
-    actor.rigWeapon = kit.userData.weapon;
+    actor.rigKit = null;
+    actor.rigWeapon = findRigNode(root, (node) => /^Weapon_/i.test(node.name));
+    if (actor.rigWeapon) {
+      actor.rigWeapon.userData.basePosition = actor.rigWeapon.position.clone();
+      actor.rigWeapon.userData.baseRotation = actor.rigWeapon.rotation.clone();
+    }
     actor.rigMaterials = rigMaterials;
     actor.gltfBasePosition = root.position.clone();
     actor.gltfBaseRotation = root.rotation.clone();
     actor.rigBones = rigBones;
-    softenRigForCinematicShell(actor, options.role);
     root.visible = true;
     actor.model.visible = false;
     actor.billboard.group.visible = false;
     setActorAction(actor, "Idle", 0);
     animatedActors.push(actor);
   } catch (error) {
-    console.warn("Rigged actor model failed to load", error);
-    if (options.role === "enemy") {
-      actor.model.visible = visualMode.actors3D;
-      actor.billboard.group.visible = !visualMode.actors3D;
-    }
+    console.warn("True character asset failed to load", error);
+    actor.model.visible = visualMode.actors3D;
+    actor.billboard.group.visible = !visualMode.actors3D;
   }
 }
 
@@ -3849,19 +3961,23 @@ function createRiggedCyberKit(role, accentHex, secondaryAccentHex, visualPalette
 
 function setActorAction(actor, actionName, fade = 0.18) {
   if (!actor.actions) return;
-  const next = actor.actions[actionName]
-    || actor.actions[actionName.toLowerCase()]
+  const normalizedName = actionName === "Attack" ? "Attack_Light" : actionName;
+  const next = actor.actions[normalizedName]
+    || actor.actions[normalizedName.toLowerCase()]
     || actor.actions.Idle
     || actor.actions.idle
     || Object.values(actor.actions)[0];
   if (!next || actor.currentAction === next) return;
 
+  const oneShot = /^(Attack_|Skill_|Hit|Death|Jump)/.test(normalizedName);
   next.enabled = true;
-  next.timeScale = actor.attack ? (actor.attack.type === "heavy" ? 0.92 : 1.34) : actionName === "Run" ? 1.18 : actionName === "Walk" ? 1.1 : 1;
+  next.clampWhenFinished = oneShot;
+  next.setLoop(oneShot ? THREE.LoopOnce : THREE.LoopRepeat, oneShot ? 1 : Infinity);
+  next.timeScale = actor.attack ? (actor.attack.type === "heavy" ? 1.0 : 1.12) : normalizedName === "Run" ? 1.18 : normalizedName === "Walk" ? 1.1 : 1;
   next.reset().fadeIn(fade).play();
   if (actor.currentAction) actor.currentAction.fadeOut(fade);
   actor.currentAction = next;
-  actor.currentActionName = actionName;
+  actor.currentActionName = normalizedName;
 }
 
 function resetRiggedWeapon(actor, dt) {
@@ -4026,8 +4142,13 @@ function setRiggedActorFlash(actor, amount, color) {
   if (!actor.rigMaterials) return;
   for (const material of actor.rigMaterials) {
     if (!material.emissive) continue;
-    material.emissive.setHex(color);
-    material.emissiveIntensity = amount;
+    if (amount > 0) {
+      material.emissive.setHex(color);
+      material.emissiveIntensity = Math.max(material.userData.baseEmissiveIntensity ?? 0, amount);
+    } else {
+      material.emissive.setHex(material.userData.baseEmissiveColor ?? 0x000000);
+      material.emissiveIntensity = material.userData.baseEmissiveIntensity ?? 0;
+    }
   }
 }
 
@@ -4478,6 +4599,7 @@ function requestPointerLockSafe() {
 function beginGame() {
   gameStarted = true;
   gameOver = false;
+  player.invulnerable = Math.max(player.invulnerable, 1.6);
   startButton.classList.add("hidden");
   canvas.focus();
   requestPointerLockSafe();
@@ -4525,6 +4647,7 @@ function resetGame() {
   statusStrip.textContent = "彌敦道 雨夜巡邏";
   statusStrip.classList.remove("hot");
   startButton.querySelector("span").textContent = "START RUN";
+  setActorAction(player, "Idle", 0.08);
   updateHud();
 }
 
@@ -4657,10 +4780,21 @@ function updatePlayer(dt) {
   const bob = moving ? Math.abs(stride) * 0.035 : Math.sin(elapsed * 2) * 0.01;
   player.model.position.y = bob;
   if (visualMode.actors3D) {
-    const actionName = player.dashTimer > 0 || player.skill?.def.dashSpeed || !player.grounded ? "Run" : moving ? (input.sprint ? "Run" : "Walk") : "Idle";
-    setActorAction(player, player.attack ? "Run" : actionName, player.attack ? 0.06 : 0.18);
+    const locomotionAction = player.dashTimer > 0 || player.skill?.def.dashSpeed
+      ? "Run"
+      : !player.grounded
+        ? "Jump"
+        : moving
+          ? (input.sprint ? "Run" : "Walk")
+          : "Idle";
+    const actionName = player.attack
+      ? (player.attack.type === "heavy" ? "Attack_Heavy" : "Attack_Light")
+      : player.skill
+        ? `Skill_${player.skill.slot + 1}`
+        : locomotionAction;
+    setActorAction(player, actionName, player.attack || player.skill ? 0.05 : 0.18);
     if (player.attack && player.currentAction) {
-      player.currentAction.timeScale = player.attack.type === "heavy" ? 0.9 : 1.42;
+      player.currentAction.timeScale = player.attack.type === "heavy" ? 1.0 : 1.16;
     }
     setRiggedActorFlash(player, player.hitPulse > 0 ? 0.18 : 0, player.hitPulse > 0 ? 0xffc46a : heroVisualPalette.accent);
     if (player.rigKit) player.rigKit.position.y = bob * 0.35;
@@ -4714,6 +4848,7 @@ function triggerJump() {
   player.verticalVelocity = 6.25;
   player.grounded = false;
   player.jumpCooldown = 0.22;
+  setActorAction(player, "Jump", 0.04);
   spawnSkillEffect("jump", player.group.position, player.yaw, { radius: 1.15, duration: 0.32, colorA: 0xffd76d, colorB: 0x2df4ed });
   addSparkBurst(player.group.position.clone().add(new THREE.Vector3(0, 0.22, 0)), 0xffd76d, 9, 1.25);
 }
@@ -4746,6 +4881,7 @@ function triggerSkill(slot) {
     hitDone: false,
     trailTimer: 0,
   };
+  setActorAction(player, `Skill_${slot + 1}`, 0.04);
   player.invulnerable = Math.max(player.invulnerable, def.invulnerable);
   if (def.jumpImpulse && player.grounded) {
     player.verticalVelocity = def.jumpImpulse;
@@ -4848,6 +4984,7 @@ function triggerAttack(type) {
     targets: new Set(),
     trailTimer: 0,
   };
+  setActorAction(player, heavy ? "Attack_Heavy" : "Attack_Light", 0.04);
   reticle.classList.add("active");
 }
 
@@ -4985,7 +5122,8 @@ function spawnWave() {
 
   showEncounter(`CONTACT  WAVE ${wave}`);
   const locations = ["彌敦道 雨夜交火", "佐敦後巷 接敵", "灣仔天橋 封鎖", "中環碼頭 追擊", "霓虹街市 壓制"];
-  setStatus(`${locations[(wave - 1) % locations.length]} / ${wavePalette.name}`, true, 2.3);
+  const livingCount = enemies.filter((enemy) => !enemy.dead).length;
+  setStatus(`${locations[(wave - 1) % locations.length]} / ${wavePalette.name} x${livingCount}`, true, 2.3);
 }
 
 function createEnemy(x, z, level) {
@@ -5286,7 +5424,7 @@ function createEnemy(x, z, level) {
     health: maxHealth,
     speed: (2.1 + Math.min(level * 0.1, 0.8) + rng() * 0.35) * (palette.speedMultiplier ?? 1),
     velocity: new THREE.Vector3(),
-    attackCooldown: 1.15 + rng() * 1.25,
+    attackCooldown: 1.8 + rng() * 1.35,
     attackWindup: 0,
     attackCommitted: false,
     hitFlash: 0,
@@ -5297,16 +5435,10 @@ function createEnemy(x, z, level) {
     useRig: shouldRig,
     palette,
   };
-  attachCinematicActorShell(enemy, {
-    role: "enemy",
-    rosterIndex: palette.rosterIndex ?? ((level - 1) % 9) + 1,
-    width: style === "constructionHeavy" || style === "leopardBruiser" || style === "goldBoss" ? 1.08 : 0.98,
-    height: palette.rigHeight ? palette.rigHeight + 0.12 : 2.06,
-    opacity: 1,
-  });
   if (shouldRig) {
     attachRiggedActor(enemy, {
       role: "enemy",
+      assetKey: getEnemyCharacterAssetKey(level),
       desiredHeight: palette.rigHeight ?? 1.98,
       level,
       palette,
@@ -5341,7 +5473,7 @@ function createEnemyHealthBar() {
 function updateEnemies(dt) {
   for (const enemy of enemies) {
     if (enemy.dead) {
-      setActorAction(enemy, "Idle", 0.12);
+      setActorAction(enemy, "Death", 0.08);
       setRiggedActorFlash(enemy, 0.22, enemy.palette?.hitColor ?? 0xff2f6d);
       enemy.deathTimer -= dt;
       enemy.group.position.y = damp(enemy.group.position.y, -0.45, 6, dt);
@@ -5415,7 +5547,14 @@ function updateEnemies(dt) {
     const pace = enemy.velocity.lengthSq() > 0.02 ? Math.sin(elapsed * 8.5 + enemy.id) : 0;
     enemy.model.position.y = Math.abs(pace) * 0.022;
     if (visualMode.actors3D) {
-      setActorAction(enemy, enemy.stun > 0 || enemy.attackWindup > 0 ? "Idle" : pace !== 0 ? "Run" : "Idle");
+      const enemyAction = enemy.attackWindup > 0
+        ? "Attack_Light"
+        : enemy.stun > 0
+          ? "Hit"
+          : pace !== 0
+            ? "Run"
+            : "Idle";
+      setActorAction(enemy, enemyAction, enemy.attackWindup > 0 || enemy.stun > 0 ? 0.05 : 0.14);
       if (enemy.rigKit) enemy.rigKit.position.y = Math.abs(pace) * 0.01;
     }
     if (!visualMode.actors3D) {
@@ -5478,6 +5617,7 @@ function damageEnemy(enemy, amount, dir, knockback) {
   enemy.stun = amount > 40 ? 0.34 : 0.22;
   enemy.hitFlash = 0.14;
   enemy.velocity.addScaledVector(dir, knockback);
+  setActorAction(enemy, "Hit", 0.04);
   player.combo += 1;
   player.comboTimer = 2.1;
   player.stamina = Math.min(player.maxStamina, player.stamina + 6);
@@ -5489,6 +5629,7 @@ function damageEnemy(enemy, amount, dir, knockback) {
   if (enemy.health <= 0) {
     enemy.dead = true;
     enemy.deathTimer = 0.72;
+    setActorAction(enemy, "Death", 0.05);
     createFloatingText("K.O.", enemy.group.position, "#ffeb9a");
     addSparkBurst(enemy.group.position.clone().add(new THREE.Vector3(0, 1.1, 0)), 0xff365d, 24, 3.0);
     spawnImpactBloom(enemy.group.position, 0xff365d, 1.55);
